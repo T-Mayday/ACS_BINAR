@@ -44,10 +44,11 @@ class SMConnect:
     def execute_query(self, query):
         try:
             self.cursor.execute(query)
-            return self.cursor.fetchall()
+            result = self.cursor.fetchall() or []
+            return result
         except cx_Oracle.DatabaseError as e:
             send_msg_error(f"SM Ошибка выполнения запроса: {e}")
-            raise
+            return []
 
     def execute_update(self, query):
         try:
@@ -68,7 +69,11 @@ class SMConnect:
     def user_exists(self, username):
         query = f"SELECT * FROM users WHERE username = '{username}'"
         result = self.execute_query(query)
-        return result[0] if result else None
+
+        if result and isinstance(result, (list, tuple)):
+            return result[0]
+        else:
+            return None
 
     def create_user(self, username, password, role_id):
         query = f"INSERT INTO users (username, password, role_id) VALUES ('{username}', '{password}', '{role_id}')"
