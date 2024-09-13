@@ -201,11 +201,10 @@ def blocking_user(file_path):
     # поиск по INN
     exists_in_AD = search_in_AD(INN, conn,base_dn)
 
-
-    # поиск по логинам в SM
-    sm_login = sm_conn.user_exists(employee.sm_login) == -1
-    sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
-    sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
+    # # поиск по логинам в SM
+    # sm_login = sm_conn.user_exists(employee.sm_login) == -1
+    # sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
+    # sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
 
     name_atrr = {
         'userAccountControl': b'514'
@@ -270,8 +269,6 @@ def blocking_user(file_path):
             # log.error(f'BX24 и AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Поиск не нашел в домене сотрудника')
 
 
-
-
     if flags['ZUP'] or flags['RTL'] or flags['ERP']:
 
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
@@ -288,6 +285,10 @@ def blocking_user(file_path):
 
 
     if flags['SM_GEN']:
+    # поиск по логинам в SM
+        sm_login = sm_conn.user_exists(employee.sm_login) == -1
+        sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
+        sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
         if sm_login:
             try:
                 if state == '1':
