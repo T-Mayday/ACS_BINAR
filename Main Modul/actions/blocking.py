@@ -260,14 +260,14 @@ def blocking_user(file_path):
                         f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Выполнено")
                 else:
                     send_msg_error(f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Не выполнено.")
-                    log.error(f'BX24. Блокировка: У сотрудника {employee.lastname, employee.firstname, employee.lastname} ID {id_user_bx.decode('utf-8')} не найден в Битрикс24.')
+                    # log.error(f"BX24. Блокировка: У сотрудника {employee.lastname, employee.firstname, employee.lastname} ID {id_user_bx.decode('utf-8')} не найден в Битрикс24.")
             else:
                 send_msg(
                     f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Выполнено")
         else:
             send_msg_error(
                 f'BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Не выполнено')
-            log.error(f'BX24 и AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Поиск не нашел в домене сотрудника')
+            # log.error(f'BX24 и AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Поиск не нашел в домене сотрудника')
 
 
 
@@ -298,7 +298,7 @@ def blocking_user(file_path):
                         f'СуперМаг Глобальный (Тест). Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Выполнено')
             except Exception as e:
                 send_msg_error(f'СуперМаг Глобальный. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Не выполнено')
-                log.error(f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
+                # log.error(f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
 
 
         elif sm_long_login:
@@ -313,8 +313,8 @@ def blocking_user(file_path):
             except Exception as e:
                 send_msg_error(
                     f'СуперМаг Глобальный. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Не выполнено')
-                log.error(
-                    f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
+                # log.error(
+                #     f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
 
         elif sm_full_login:
             try:
@@ -328,11 +328,11 @@ def blocking_user(file_path):
             except Exception as e:
                 send_msg_error(
                     f'СуперМаг Глобальный. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Не выполнено')
-                log.error(
-                    f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
+                # log.error(
+                #     f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
         else:
             send_msg_error(f'СуперМаг Глобальный. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Не выполнено')
-            log.error(f'Поиск выдал что не по одному из логинов у сотрудника {employee.lastname, employee.firstname, employee.lastname} на должности {userData["G2"].value, userData["J2"].value} не нашел')
+            # log.error(f'Поиск выдал что не по одному из логинов у сотрудника {employee.lastname, employee.firstname, employee.lastname} на должности {userData["G2"].value, userData["J2"].value} не нашел')
 
 
 
