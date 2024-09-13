@@ -8,17 +8,19 @@ class SMConnect:
     def __init__(self):
         self.config = configparser.ConfigParser()
         self.config.read('connect_domain.ini')
-        self.service_name = self.config['DB']['service_name']
-        self.username = self.config['DB']['username']
-        self.password = self.config['DB']['password']
-        self.role_id = self.config['DB']['role_id']
+        self.service_name = self.config['SM']['service_name']
+        self.username = self.config['SM']['username']
+        self.password = self.config['SM']['password']
+        self.role_id = self.config['SM']['role_id']
         self.connection = None
         self.cursor = None
+    def getRoleID(self):
+        return self.role_id
 
     def connect_SM(self):
         try:
-            dsn = cx_Oracle.makedsn(self.service_name)
-            self.connection = cx_Oracle.connect(self.username, self.password, dsn)
+            # dsn = cx_Oracle.makedsn(self.service_name)
+            self.connection = cx_Oracle.connect(self.username, self.password, self.service_name)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
             log(f"Ошибка подключения: {e}")
