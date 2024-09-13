@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+# from message.message import send_msg, send_msg_error, log
 
 # Подключение к Bitrix24
 from connect.bitrixConnect import Bitrix24Connector
@@ -20,6 +21,7 @@ log.debug('level=DEBUG')
 def send_msg(msg):
     global chatID
     try:
+        log.info(msg)
         res = bx24.call('im.message.add', {'DIALOG_ID': chatID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
     except Exception as e:
         log.exception("Error sending message", e)
