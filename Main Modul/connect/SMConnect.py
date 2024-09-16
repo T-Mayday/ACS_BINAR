@@ -23,7 +23,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, self.service_name)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка подключения: {e}")
+            send_msg_error(f"SM Ошибка подключения: {self.username}@{self.service_name} {e}")
             raise
 
     def connect_SM_LOCAL(self, service_name):
@@ -32,7 +32,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, dsn)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка подключения: {e}")
+            send_msg_error(f"SM Ошибка подключения: {self.username}@{service_name} {e}")
             raise
 
     def close(self):
@@ -100,7 +100,7 @@ class SMConnect:
                 result = cursor.fetchone()
                 return result[0] if result else None
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка получения dbname по store_id: {e}")
+            send_msg_error(f"SM Ошибка получения dbname по store_id={store_id}: {e}")
             raise
 
     def create_user_in_local_db(self, dbname, user_login, user_password, role_id):
