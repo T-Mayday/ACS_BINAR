@@ -47,7 +47,7 @@ class SMConnect:
             result = self.cursor.fetchall() or []
             return result
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения запроса: {e}")
+            send_msg_error(f"SM Ошибка выполнения запроса: {query} {e}")
             return []
 
     def execute_update(self, query):
@@ -55,7 +55,7 @@ class SMConnect:
             self.cursor.execute(query)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения обновления: {e}")
+            send_msg_error(f"SM Ошибка выполнения обновления: {query} {e}")
             raise
 
     def execute_procedure(self, procedure_name, params):
@@ -63,7 +63,7 @@ class SMConnect:
             self.cursor.callproc(procedure_name, params)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения процедуры: {e}")
+            send_msg_error(f"SM Ошибка выполнения процедуры: {query} {e}")
             raise
 
     def user_exists(self, username):

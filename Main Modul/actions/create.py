@@ -211,12 +211,6 @@ def create_user(file_path):
     second_login = search_login(employee.long_login, conn, base_dn)
     tried_login = search_login(employee.full_login, conn, base_dn)
 
-    # поиск по логинам в SM
-    sm_login = sm_conn.user_exists(employee.sm_login) == -1
-    sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
-    sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
-
-
     ad_success = False
     bx24_success = False
     c1_success = False
@@ -413,6 +407,10 @@ def create_user(file_path):
         return c1_success
 
     if flags['SM_GEN']:
+    # поиск по логинам в SM
+        sm_login = sm_conn.user_exists(employee.sm_login) == -1
+        sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
+        sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
         if sm_login:
             try:
                 sm_success = sm_conn.create_user(sm_login, employee.password, test_role_id)
