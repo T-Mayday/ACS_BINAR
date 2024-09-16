@@ -29,14 +29,12 @@ from actions.holiday import holiday
 # Подключение файла сообщения
 from message.message import send_msg, log
 
-
 def move_file(file_path,output_dir):
     if os.path.exists( output_dir+os.path.basename(file_path) ):
         dest_name = os.path.join(output_dir,datetime.now().strftime('%H%M%S')+os.path.basename(file_path))
     else:
         dest_name = output_dir
     shutil.move(file_path, dest_name)
-
 
 def process_file(file_path):
     try:
