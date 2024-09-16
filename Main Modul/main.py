@@ -29,12 +29,14 @@ from actions.holiday import holiday
 # Подключение файла сообщения
 from message.message import send_msg, log
 
+
 def move_file(file_path,output_dir):
     if os.path.exists( output_dir+os.path.basename(file_path) ):
         dest_name = os.path.join(output_dir,datetime.now().strftime('%H%M%S')+os.path.basename(file_path))
     else:
         dest_name = output_dir
     shutil.move(file_path, dest_name)
+
 
 def process_file(file_path):
     try:
@@ -70,14 +72,14 @@ def process_file(file_path):
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.16.09.2024'
+    ver = 'V.13.09.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
     else:
         mode = 'Тестовый режим!'
 
-#    log.info(f"Старт Версии {ver} {mode}")
+    log.info(f"Старт Версии {ver} {mode}")
     send_msg(f"Старт Версии {ver} {mode}")
 
     while True:
