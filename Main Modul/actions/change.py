@@ -198,13 +198,13 @@ def change_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
-    # поиск по логинам в AD
-    first_login = search_login(employee.simple_login, conn, base_dn)
-    second_login = search_login(employee.long_login, conn, base_dn)
-    tried_login = search_login(employee.full_login, conn, base_dn)
+    # # поиск по логинам в AD
+    # first_login = search_login(employee.simple_login, conn, base_dn)
+    # second_login = search_login(employee.long_login, conn, base_dn)
+    # tried_login = search_login(employee.full_login, conn, base_dn)
 
-    # поиск по INN
-    exists_in_AD = search_in_AD(INN, conn, base_dn)
+    # # поиск по INN
+    # exists_in_AD = search_in_AD(INN, conn, base_dn)
 
     # Функция для изменения пользователя в 1C
     def send_in_1c(url, data):
@@ -231,7 +231,8 @@ def change_user(file_path):
 
     def update_ad_and_bx24():
         # флаги Обновления
-        AD_update,BX24_update = False 
+        AD_update = True
+        BX24_update = False 
         
         name_atrr = {
             'sn': userData["B2"].value.encode('utf-8'),
@@ -252,6 +253,7 @@ def change_user(file_path):
         }
 
         if flags['AD'] and flags['BX24']:
+            exists_in_AD = search_in_AD(INN, conn, base_dn)
             if exists_in_AD:
                 user_dn, user_attrs = exists_in_AD[0]
                 for attr_name, attr_value in name_atrr.items():
@@ -272,12 +274,18 @@ def change_user(file_path):
                             send_msg(
                                 f"AD. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
             else:
-                pass
-
+                AD_update =  False
         else:
             return AD_update
 
         if flags['AD'] and flags['BX24']:
+            # поиск по логинам в AD
+            first_login = search_login(employee.simple_login, conn, base_dn)
+            second_login = search_login(employee.long_login, conn, base_dn)
+            tried_login = search_login(employee.full_login, conn, base_dn)
+
+            # поиск по INN
+            # exists_in_AD = search_in_AD(INN, conn, base_dn)
             if exists_in_AD:
                 user_dn, user_info = exists_in_AD[0]
                 id_user_bx = user_info.get("pager", [None])[0]
@@ -305,7 +313,7 @@ def change_user(file_path):
                         send_msg(
                             f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
             else:
-                pass
+                BX24_update = False
                 # send_msg(
                 #     f'КО Изменение: Cотрудник {employee.lastname, employee.firstname, employee.surname} не был найден в домене для изменения в BX24')
 
@@ -329,8 +337,7 @@ def change_user(file_path):
             }
             return send_in_1c(url, data)
         else:
-            pass
-
+            True
 
     if update_ad_and_bx24() and update_1c():
         return True

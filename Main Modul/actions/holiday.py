@@ -90,10 +90,10 @@ def holiday(file_path):
         'другое': '342'
     }
 
-    user_id = search_bx(lastname, firstname, surname)
 
-    if flags['BX24'] and not (user_id is None):
-        if state == "1":
+    if flags['BX24']:
+        user_id = search_bx(lastname, firstname, surname)
+        if state == "1" and not (user_id is None):
             if state_holiday.lower() in type_holiday:
                 result = type_holiday[state_holiday.lower()]
                 date = {

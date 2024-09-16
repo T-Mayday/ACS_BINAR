@@ -15,7 +15,7 @@ def search_in_AD(INN, conn, base_dn):
         result = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, search_filter)
         return result
     except Exception as e:
-        send_msg_error(f'LDAP Ошибка посик по employeeID: {str(e)} {search_filter}')
+        send_msg_error(f'LDAP Ошибка поиcка по employeeID: {search_filter} {str(e)} ')
         return []
 
 
@@ -111,8 +111,8 @@ def search_bx(last_name,name,second_name):
             r = result.get('result')[0]
             return r.get('ID')
         if result.get('error'):
-            log.error(f"BX24. Пользователь с ФИО '{last_name} {name} {second_name}' не найден.")
+            send_msg_error(f"BX24. Пользователь с ФИО '{last_name} {name} {second_name}' не найден.")
             return None
     except Exception as e:
-        log.error(f"BX24. Ошибка при получении пользователей: {e}")
+        send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")
         return None

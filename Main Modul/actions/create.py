@@ -203,19 +203,13 @@ def create_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
-    # поиск по INN
-    exists_in_AD = search_in_AD(INN, conn, base_dn)
+    # # поиск по INN
+    # exists_in_AD = search_in_AD(INN, conn, base_dn)
 
-    # поиск по логинам в AD
-    first_login = search_login(employee.simple_login, conn, base_dn)
-    second_login = search_login(employee.long_login, conn, base_dn)
-    tried_login = search_login(employee.full_login, conn, base_dn)
-
-    # поиск по логинам в SM
-    sm_login = sm_conn.user_exists(employee.sm_login) == -1
-    sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
-    sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
-
+    # # поиск по логинам в AD
+    # first_login = search_login(employee.simple_login, conn, base_dn)
+    # second_login = search_login(employee.long_login, conn, base_dn)
+    # tried_login = search_login(employee.full_login, conn, base_dn)
 
     ad_success = False
     bx24_success = False
@@ -359,7 +353,13 @@ def create_user(file_path):
 
     # Основная логика
     if flags['AD'] and flags['Normal_account'] and flags['BX24']:
+    # поиск по INN
+        exists_in_AD = search_in_AD(INN, conn, base_dn)
         if len(exists_in_AD) == 0:
+            # поиск по логинам в AD
+            first_login = search_login(employee.simple_login, conn, base_dn)
+            second_login = search_login(employee.long_login, conn, base_dn)
+            tried_login = search_login(employee.full_login, conn, base_dn)
             if len(first_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.simple_login)
@@ -413,6 +413,10 @@ def create_user(file_path):
         return c1_success
 
     if flags['SM_GEN']:
+    # поиск по логинам в SM
+        sm_login = sm_conn.user_exists(employee.sm_login) == -1
+        sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
+        sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
         if sm_login:
             try:
                 sm_success = sm_conn.create_user(sm_login, employee.password, test_role_id)

@@ -23,7 +23,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, self.service_name)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка подключения: {e}")
+            send_msg_error(f"SM Ошибка подключения: {self.username}@{self.service_name} {e}")
             raise
 
     def connect_SM_LOCAL(self, service_name):
@@ -32,7 +32,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, dsn)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка подключения: {e}")
+            send_msg_error(f"SM Ошибка подключения: {self.username}@{service_name} {e}")
             raise
 
     def close(self):
@@ -44,17 +44,18 @@ class SMConnect:
     def execute_query(self, query):
         try:
             self.cursor.execute(query)
-            return self.cursor.fetchall()
+            result = self.cursor.fetchall() or []
+            return result
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения запроса: {e}")
-            raise
+            send_msg_error(f"SM Ошибка выполнения запроса: {query} {e}")
+            return []
 
     def execute_update(self, query):
         try:
             self.cursor.execute(query)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения обновления: {e}")
+            send_msg_error(f"SM Ошибка выполнения обновления: {query} {e}")
             raise
 
     def execute_procedure(self, procedure_name, params):
@@ -62,24 +63,28 @@ class SMConnect:
             self.cursor.callproc(procedure_name, params)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения процедуры: {e}")
+            send_msg_error(f"SM Ошибка выполнения процедуры: {query} {e}")
             raise
 
     def user_exists(self, username):
-        query = f"SELECT * FROM users WHERE username = '{username}'"
+        query = f"SELECT * FROM dba_users WHERE username = '{username}'"
         result = self.execute_query(query)
-        return result[0] if result else None
+
+        if result and isinstance(result, (list, tuple)):
+            return result[0]
+        else:
+            return None
 
     def create_user(self, username, password, role_id):
-        query = f"INSERT INTO users (username, password, role_id) VALUES ('{username}', '{password}', '{role_id}')"
+        query = f"INSERT INTO dba_users (username, password, role_id) VALUES ('{username}', '{password}', '{role_id}')"
         self.execute_update(query)
 
     def block_user(self, username):
-        query = f"UPDATE users SET status='blocked' WHERE username='{username}'"
+        query = f"UPDATE dba_users SET status='blocked' WHERE username='{username}'"
         self.execute_update(query)
 
     def unblock_user(self, username, user_id):
-        query = f"UPDATE users SET status='active' WHERE username='{username}' AND id='{user_id}'"
+        query = f"UPDATE dba_users SET status='active' WHERE username='{username}' AND id='{user_id}'"
         self.execute_update(query)
 
     def get_store(self, store_id):
@@ -95,7 +100,7 @@ class SMConnect:
                 result = cursor.fetchone()
                 return result[0] if result else None
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка получения dbname по store_id: {e}")
+            send_msg_error(f"SM Ошибка получения dbname по store_id={store_id}: {e}")
             raise
 
     def create_user_in_local_db(self, dbname, user_login, user_password, role_id):
