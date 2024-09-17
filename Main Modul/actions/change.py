@@ -252,7 +252,7 @@ def change_user(file_path):
             "PERSONAL_MOBILE": userData['K2'].value
         }
 
-        if flags['AD'] and flags['BX24']:
+        if flags['AD'] and flags['BX24'] and flags['Normal_account']:
             exists_in_AD = search_in_AD(INN, conn, base_dn)
             if exists_in_AD:
                 user_dn, user_attrs = exists_in_AD[0]
@@ -278,7 +278,7 @@ def change_user(file_path):
         else:
             return AD_update
 
-        if flags['AD'] and flags['BX24']:
+        if flags['AD'] and flags['BX24'] and flags['Normal_account']:
             # поиск по логинам в AD
             first_login = search_login(employee.simple_login, conn, base_dn)
             second_login = search_login(employee.long_login, conn, base_dn)
@@ -323,7 +323,7 @@ def change_user(file_path):
             return False
 
     def update_1c():
-        if flags['ZUP'] or flags['RTL'] or flags['ERP']:
+        if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
             ZUP_value, RTL_value, ERP_value = (
                 1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 

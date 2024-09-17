@@ -352,7 +352,7 @@ def create_user(file_path):
 
 
     # Основная логика
-    if flags['AD'] and flags['Normal_account'] and flags['BX24']:
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
     # поиск по INN
         exists_in_AD = search_in_AD(INN, conn, base_dn)
         if len(exists_in_AD) == 0:
@@ -389,7 +389,7 @@ def create_user(file_path):
         bx24_success = True
         return ad_success, bx24_success
 
-    if flags['ZUP'] or flags['RTL'] or flags['ERP']:
+    if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         ZUP_value, RTL_value, ERP_value = (
             1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
@@ -412,7 +412,7 @@ def create_user(file_path):
         c1_success = True
         return c1_success
 
-    if flags['SM_GEN']:
+    if flags['SM_GEN'] and flags['Normal_account']:
     # поиск по логинам в SM
         sm_login = sm_conn.user_exists(employee.sm_login) == -1
         sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1

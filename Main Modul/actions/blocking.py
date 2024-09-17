@@ -232,7 +232,7 @@ def blocking_user(file_path):
             return send_msg_error(f'1C. Блокировка. Ошибка: {e}')
 
 
-    if flags['AD']:
+    if flags['AD'] and flags['Normal_account']:
         # поиск по INN
         exists_in_AD = search_in_AD(INN, conn,base_dn)
         if exists_in_AD:
@@ -248,7 +248,7 @@ def blocking_user(file_path):
                         send_msg(
                             f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
 
-    if flags['AD'] and flags['BX24']:
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
         if exists_in_AD:
             user_dn, user_info = exists_in_AD[0]
             id_user_bx = user_info.get("pager", [None])[0]
@@ -270,7 +270,7 @@ def blocking_user(file_path):
             # log.error(f'BX24 и AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Поиск не нашел в домене сотрудника')
 
 
-    if flags['ZUP'] or flags['RTL'] or flags['ERP']:
+    if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
         url = connector_1c.getUrlBlock()
@@ -284,7 +284,7 @@ def blocking_user(file_path):
         send_in_1c(url,data)
 
 
-    if flags['SM_GEN']:
+    if flags['SM_GEN'] and flags['Normal_account']:
     # поиск по логинам в SM
         sm_login      = sm_conn.user_exists(employee.sm_login) == -1
         sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
