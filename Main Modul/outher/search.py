@@ -98,6 +98,7 @@ def search_login(login, conn, base_dn):
 # Функция для получения всех пользователей
 def get_all_users():
     try:
+        bx24.refresh_tokens()
         result = bx24.call("user.get")
         return result['result']
     except Exception as e:
@@ -106,12 +107,13 @@ def get_all_users():
 
 def search_bx(last_name,name,second_name):
     try:
+        bx24.refresh_tokens()
         result = bx24.call("user.get", {"LAST_NAME": last_name,"NAME": name,"SECOND_NAME" : second_name})
         if result.get('result'):
             r = result.get('result')[0]
             return r.get('ID')
         if result.get('error'):
-            send_msg_error(f"BX24. Пользователь с ФИО '{last_name} {name} {second_name}' не найден.")
+            send_msg_error(f"BX24. Пользователь с ФИО '{last_name} {name} {second_name}' не найден. {result.get('error')[0]}")
             return None
     except Exception as e:
         send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")

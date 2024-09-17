@@ -72,7 +72,7 @@ def process_file(file_path):
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.16.09.2024'
+    ver = 'V.17.09.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
@@ -81,14 +81,14 @@ def main():
 
 #    log.info(f"Старт Версии {ver} {mode}")
     send_msg(f"Старт Версии {ver} {mode}")
-
+    n = 0
     while True:
         for root, dirs, files in os.walk(input_dir):
             for file in fnmatch.filter(files, "*.xlsx"):
                 log.info(os.path.join(root, file))
                 process_file(os.path.join(root, file))
         time.sleep(60)
-        print(datetime.now())
+        print(datetime.now())            
 
 if __name__ == '__main__':
     main()
