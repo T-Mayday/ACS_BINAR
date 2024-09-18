@@ -22,6 +22,7 @@ def send_msg(msg):
     global chatID
     try:
         log.info(msg)
+        bx24.refresh_tokens()
         res = bx24.call('im.message.add', {'DIALOG_ID': chatID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
     except Exception as e:
         log.exception("Error sending message", e)
@@ -30,6 +31,7 @@ def send_msg_error(msg):
     global chatID
     try:
         log.exception(msg)
+        bx24.refresh_tokens()
         res = bx24.call('im.message.add', {'DIALOG_ID': chatID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
     except Exception as e:
         log.exception(e)

@@ -111,6 +111,7 @@ def holiday(file_path):
                     }
                 }
                 try:
+                    bx24.refresh_tokens() 
                     result = bx24.call('lists.element.add', date)
                     if result.get('error'):
                         error_message = result.get('error_description')
