@@ -13,6 +13,7 @@ class ActiveDirectoryConnector:
         self.state = self.config.get('Domain', 'state')
         self.base_dn = self.config.get('Domain', 'base_dn')
         self.dn = self.config.get( 'Domain', 'dn')
+        self.newuser_dn = self.config.get( 'Domain', 'newuser_dn')
         self.search_base = self.config.get( 'Domain', 'search_base')
         self.adress = self.config.get('Domain', 'ardress')
         self.dir_input = self.config.get('Domain', 'input')
@@ -24,6 +25,9 @@ class ActiveDirectoryConnector:
 
     def getDn(self):
         return self.dn
+
+    def getNewUserDn(self):
+        return self.newuser_dn
 
     def getSearchBase(self):
         return self.search_base

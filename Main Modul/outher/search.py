@@ -1,4 +1,5 @@
 import ldap
+from ldap.filter import escape_filter_chars
 
 # Подключение файла сообщения
 from message.message import send_msg_error, log
@@ -10,7 +11,8 @@ bx24, tokens = bitrix_connector.connect()
 
 
 def search_in_AD(INN, conn, base_dn):
-    search_filter = f"(employeeID={INN})"
+#    search_filter = f"(employeeID={INN})"
+    search_filter = "(employeeID=%s)" % (ldap.filter.escape_filter_chars(INN))
     try:
         result = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, search_filter)
         return result

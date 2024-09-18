@@ -263,12 +263,12 @@ def change_user(file_path):
                             try:
                                 conn.modify_s(user_dn, mod_attrs)
                                 send_msg(
-                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено ")
+                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. обновление атрибута {attr_name}. Выполнено ")
                                 AD_update =  False
                                 return AD_update
                             except Exception as e:
-                                send_msg_error(f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено")
-                                log.error(f'AD. Изменение: Ошибка при обновлении атрибута {attr_name} в домене у Сотрудника {employee.lastname, employee.firstname, employee.surname} - {e}')
+                                send_msg_error(f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
+#                                log.error(f'AD. Изменение: Ошибка при обновлении атрибута {attr_name} в домене у Сотрудника {employee.lastname, employee.firstname, employee.surname} - {e}')
                                 AD_update = False
                         else:
                             send_msg(
@@ -291,11 +291,12 @@ def change_user(file_path):
                 id_user_bx = user_info.get("pager", [None])[0]
                 if not id_user_bx or len(id_user_bx) <= 0:
                     send_msg_error(
-                        f'BX24. Изменение: У сотрудника {employee.lastname, employee.firstname, employee.surname} не записан ID BX24 в атрибуите pager AD')
+                        f'BX24. Изменение: У сотрудника {employee.lastname, employee.firstname, employee.surname} не записан ID BX24 в атрибуте pager AD')
                     BX24_update = False
                     return BX24_update
                 else:
                     if state == '1':
+                        bx24.refresh_tokens()
                         response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
                         if response:
                             bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), **new_data})
