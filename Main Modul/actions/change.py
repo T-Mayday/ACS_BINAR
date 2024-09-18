@@ -218,15 +218,15 @@ def change_user(file_path):
                     return True
                 else:
                     result = response.text
-                    send_msg_error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено - {response.status_code}')
-                    log.error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Данные {data} отправлены, результат {result}')
+                    send_msg_error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
+#                    log.error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Данные {data} отправлены, результат {result}')
                     return False
             else:
                 send_msg(f'1С. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
                 return True
         except requests.exceptions.RequestException as e:
-            send_msg_error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено')
-            log.error(f'1С. Изменение: Ошибка {e} у сотрудника {employee.lastname, employee.firstname, employee.surname}')
+            send_msg_error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка {e}')
+#            log.error(f'1С. Изменение: Ошибка {e} у сотрудника {employee.lastname, employee.firstname, employee.surname}')
             return False
 
     def update_ad_and_bx24():
