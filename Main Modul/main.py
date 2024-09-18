@@ -48,25 +48,22 @@ def process_file(file_path):
             created = create_user(file_path)
             if created:
                 move_file(file_path, output_dir)
-                send_msg(f'Файл {os.path.basename(file_path)} обработан')
             else:
                 raise ValueError("Ошибка при создании пользователя")
         elif action == "Изменение":
             changed = change_user(file_path)
             if changed:
                 move_file(file_path, output_dir)
-                send_msg(f'Файл {os.path.basename(file_path)} обработан')
+
             else:
                 raise ValueError("Ошибка при изменении пользователя")
         elif action == "Блокировка":
             blocking_user(file_path)
             move_file(file_path, output_dir)
-            send_msg(f'Файл {os.path.basename(file_path)} обработан')
 
         elif action in ["Отпуск", "больничный", "командировка"]:
             holiday(file_path)
             move_file(file_path, output_dir)
-            send_msg(f'Файл {os.path.basename(file_path)} обработан')
     except Exception as e:
         move_file(file_path, waste_dir)
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
