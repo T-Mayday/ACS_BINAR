@@ -14,8 +14,6 @@ class SMConnect:
         self.role_id = self.config['SM']['role_id']
         self.connection = None
         self.cursor = None
-    def getRoleID(self):
-        return self.role_id
 
     def connect_SM(self):
         try:
@@ -32,7 +30,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, dsn)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка подключения: {self.username}@{service_name} {e}")
+            log(f"Ошибка подключения: {e}")
             raise
 
     def close(self):
@@ -66,44 +64,98 @@ class SMConnect:
             send_msg_error(f"SM Ошибка выполнения процедуры: {query} {e}")
             raise
 
-    def user_exists(self, username):
-        query = f"SELECT * FROM dba_users WHERE username = '{username}'"
+    def user_exists(self, surname):
+        query = f"""
+        SELECT NVL((SELECT userenabled FROM supermag.smstaff WHERE UPPER(surname) = UPPER('{surname}')), -1) AS user_exists
+        FROM dual
+        """
         result = self.execute_query(query)
+        return result[0] if result else -1
 
-        if result and isinstance(result, (list, tuple)):
-            return result[0]
-        else:
-            return None
+    def create_user(self, username, password, role):
+        try:
+            query = f"""
+            DECLARE
+                pUser VARCHAR2(255) := '{username}'; -- Логин
+                password VARCHAR2(255) := '{password}'; -- Пароль
+                pDol VARCHAR2(20) := '{role}'; -- Должность
+            BEGIN
+                SUPERMAG.BIN_CreateUser(pUser, password, pDol, 1, 1);
+            END;
+            """
+            self.execute_update(query)
+            send_msg(f"SM Пользователь {username} успешно создан.")
+        except cx_Oracle.DatabaseError as e:
+            send_msg_error(f"SM Ошибка при создании пользователя {username}: {e}")
+            raise
 
-    def create_user(self, username, password, role_id):
-        query = f"INSERT INTO dba_users (username, password, role_id) VALUES ('{username}', '{password}', '{role_id}')"
-        self.execute_update(query)
+    def block_user(self, login, user_id):
+        try:
+            query = f"""
+            BEGIN
+                EXECUTE IMMEDIATE 'REVOKE SUPERMAG_USER FROM {login}';
 
-    def block_user(self, username):
-        query = f"UPDATE dba_users SET status='blocked' WHERE username='{username}'"
-        self.execute_update(query)
+                UPDATE Supermag.SMStaff
+                SET UserEnabled = '0'
+                WHERE ID = {user_id};
 
-    def unblock_user(self, username, user_id):
-        query = f"UPDATE dba_users SET status='active' WHERE username='{username}' AND id='{user_id}'"
-        self.execute_update(query)
+                COMMIT;
+            END;
+            """
+            self.execute_update(query)
+            send_msg(f"SM Пользователь {login} с ID {user_id} успешно заблокирован.")
+        except cx_Oracle.DatabaseError as e:
+            send_msg_error(f"SM Ошибка при блокировке пользователя {login}: {e}")
+            raise
+
+    def unblock_user(self, login, user_id):
+        try:
+            query = f"""
+            BEGIN
+                EXECUTE IMMEDIATE 'GRANT SUPERMAG_USER TO {login}';
+
+                UPDATE Supermag.SMStaff
+                SET UserEnabled = '1'
+                WHERE ID = {user_id};
+
+                COMMIT;
+            END;
+            """
+            self.execute_update(query)
+            send_msg(f"SM Пользователь {login} с ID {user_id} успешно разблокирован.")
+        except cx_Oracle.DatabaseError as e:
+            send_msg_error(f"SM Ошибка при разблокировке пользователя {login}: {e}")
+            raise
 
     def get_store(self, store_id):
         try:
             with self.cursor as cursor:
                 cursor.execute("""
-                    SELECT t.dbname
+                    SELECT
+                        l.id,
+                        l.name,
+                        t.dbname
                     FROM supermag.smstorelocations l
-                    JOIN (SELECT storeloc, propval AS dbname FROM supermag.smstoreproperties WHERE propid='REP.DBNAME') t
+                    JOIN (SELECT storeloc, propval AS dbname 
+                          FROM supermag.smstoreproperties 
+                          WHERE propid = 'REP.DBNAME') t
                     ON l.id = t.storeloc
                     WHERE l.id = :store_id
+                    ORDER BY l.name
                 """, store_id=store_id)
+
                 result = cursor.fetchone()
-                return result[0] if result else None
+                return {
+                    "id": result[0],
+                    "name": result[1],
+                    "dbname": result[2]
+                } if result else None
+
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка получения dbname по store_id={store_id}: {e}")
+            send_msg_error(f"SM Ошибка получения данных по store_id={store_id}: {e}")
             raise
 
-    def create_user_in_local_db(self, dbname, user_login, user_password, role_id):
+    def create_user_in_local_db(self, dbname, user_login, user_password, user_role):
         """Создание пользователя в локальной базе данных."""
         local_dsn = cx_Oracle.makedsn('localhost', '1521', service_name=dbname)
         try:
@@ -113,20 +165,19 @@ class SMConnect:
                     DECLARE
                         pUser VARCHAR2(255) := :user_login; 
                         password VARCHAR2(255) := :user_password;                     
-                        pDolID NUMBER := :role_id;
-                        pDolzhnost VARCHAR2(20);
+                        pDol VARCHAR2(20) := :user_role;
                     BEGIN 
-                        SELECT orarole INTO pDolzhnost FROM supermag.smoffcfg WHERE id = pDolID;                    
-                        Supermag.BIN_CreateUser(pUser, password, pDolzhnost, 1, 1);
-                    END;            
-                """, user_login=user_login, user_password=user_password, role_id=role_id)
+                        SUPERMAG.BIN_CreateUser(pUser, password, pDol, 1, 1);
+                    END;
+                """, user_login=user_login, user_password=user_password, user_role=user_role)
 
                 local_connection.commit()
-                send_msg(f"Пользователь {user_login} успешно создан в базе данных {dbname}.")
+                log.info(f"Пользователь {user_login} успешно создан в базе данных {dbname}.")
         except Exception as e:
-            send_msg_error(f"SM Не удалось создать пользователя {user_login} в базе данных {dbname}: {e}")
+            log.error(f"Не удалось создать пользователя {user_login} в базе данных {dbname}: {e}")
         finally:
             if local_connection:
                 local_connection.close()
+
 
 

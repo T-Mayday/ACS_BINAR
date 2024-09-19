@@ -54,7 +54,6 @@ def process_file(file_path):
             changed = change_user(file_path)
             if changed:
                 move_file(file_path, output_dir)
-
             else:
                 raise ValueError("Ошибка при изменении пользователя")
         elif action == "Блокировка":
@@ -69,7 +68,7 @@ def process_file(file_path):
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.18.09.2024'
+    ver = 'V.20.09.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'

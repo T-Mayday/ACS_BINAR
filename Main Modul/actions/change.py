@@ -5,15 +5,14 @@ import requests
 import random
 import string
 
-
 # Подключение файла create.py
 # from actions.create import create_user
 
 # подключение файла поиска
-from outher.search import user_verification, find_jobfriend, search_in_AD,search_login
+from outher.search import user_verification, find_jobfriend, search_in_AD, search_login
 
 # подключение файла сообщений
-from message.message import send_msg, send_msg_error,log
+from message.message import send_msg, send_msg_error, log
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -23,10 +22,12 @@ bx24, tokens = bitrix_connector.connect()
 
 # подключение connect1c
 from connect.connect1C import Connector1C
+
 connector_1c = Connector1C()
 
 # Подключение ldapConnect
 from connect.ldapConnect import ActiveDirectoryConnector
+
 connector = ActiveDirectoryConnector()
 base_dn = connector.getBaseDn()
 state = connector.getState()
@@ -36,19 +37,19 @@ conn = connector.connect_ad()
 
 # Матрица перевода
 transliteration_dict = {
-            'А': 'A', 'К': 'K', 'Х': 'KH',
-            'Б': 'B', 'Л': 'L', 'Ц': 'TS',
-            'В': 'V', 'М': 'M', 'Ч': 'CH',
-            'Г': 'G', 'Н': 'N', 'Ш': 'SH',
-            'Д': 'D', 'О': 'O', 'Щ': 'SHCH',
-            'Е': 'E', 'Ё': 'E', 'Ж': 'ZH',
-            'П': 'P', 'Ъ': '',
-            'Р': 'R', 'Ы': 'Y',
-            'З': 'Z', 'Т': 'T', 'Э': 'E',
-            'И': 'I', 'У': 'U',
-            'Й': 'Y', 'Ф': 'F',
-            'С': 'S', 'Ь': '',
-            'Ю': 'YU', 'Я': 'YA',
+    'А': 'A', 'К': 'K', 'Х': 'KH',
+    'Б': 'B', 'Л': 'L', 'Ц': 'TS',
+    'В': 'V', 'М': 'M', 'Ч': 'CH',
+    'Г': 'G', 'Н': 'N', 'Ш': 'SH',
+    'Д': 'D', 'О': 'O', 'Щ': 'SHCH',
+    'Е': 'E', 'Ё': 'E', 'Ж': 'ZH',
+    'П': 'P', 'Ъ': '',
+    'Р': 'R', 'Ы': 'Y',
+    'З': 'Z', 'Т': 'T', 'Э': 'E',
+    'И': 'I', 'У': 'U',
+    'Й': 'Y', 'Ф': 'F',
+    'С': 'S', 'Ь': '',
+    'Ю': 'YU', 'Я': 'YA',
 }
 
 # Словарь для шифрования и обратный
@@ -69,16 +70,17 @@ reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
 # Подключение файла create.py
 from actions.create import create_user
 
+
 # Функция для шифрование ИНН
 def encrypt_inn(inn):
-        encrypted_inn = ''
-        for digit in inn:
-            if digit in cipher_dict:
-                encrypted_inn += cipher_dict[digit]
-            else:
-                log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
-                encrypted_inn += digit
-        return encrypted_inn
+    encrypted_inn = ''
+    for digit in inn:
+        if digit in cipher_dict:
+            encrypted_inn += cipher_dict[digit]
+        else:
+            log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
+            encrypted_inn += digit
+    return encrypted_inn
 
 
 # Класс создания нужных атрибутов
@@ -103,7 +105,8 @@ class Person:
         result = []
         for item in text:
             if item.upper() in transliteration_dict:
-                result.append(transliteration_dict[item.upper()].upper() if item.isupper() else transliteration_dict[item.upper()].lower())
+                result.append(transliteration_dict[item.upper()].upper() if item.isupper() else transliteration_dict[
+                    item.upper()].lower())
             else:
                 result.append(item)
         return ''.join(result)
@@ -159,21 +162,25 @@ class Person:
         lower = random.choice(string.ascii_lowercase)
         upper = random.choice(string.ascii_uppercase)
         digit = random.choice(string.digits)
-        all_characters = lower + upper + digit + ''.join(random.choices(string.ascii_letters + string.digits, k=length - 3))
+        all_characters = lower + upper + digit + ''.join(
+            random.choices(string.ascii_letters + string.digits, k=length - 3))
         return ''.join(random.sample(all_characters, len(all_characters)))
+
 
 # Инициализация флагов доступа
 flags = {
-        'AD': False,
-        'BX24': False,
-        'ZUP': False,
-        'RTL': False,
-        'ERP': False,
-        'SM_GEN': False,
-        'SM_LOCAL': False,
-        'Normal_account': False,
-        'Shop_account': False
+    'AD': False,
+    'BX24': False,
+    'ZUP': False,
+    'RTL': False,
+    'ERP': False,
+    'SM_GEN': False,
+    'SM_LOCAL': False,
+    'Normal_account': False,
+    'Shop_account': False
 }
+
+
 def change_user(file_path):
     global base_dn, state, flags
 
@@ -181,7 +188,6 @@ def change_user(file_path):
 
     df_users = pd.read_excel(file_path)
     df_roles = pd.read_excel('info.xlsx')
-
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
@@ -214,26 +220,29 @@ def change_user(file_path):
                 response = requests.post(url, json=data, headers=headers)
                 if response.status_code == 200:
                     send_msg(
-                            f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
+                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
                     return True
                 else:
                     result = response.text
-                    send_msg_error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
-#                    log.error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Данные {data} отправлены, результат {result}')
+                    send_msg_error(
+                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
+                    #                    log.error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Данные {data} отправлены, результат {result}')
                     return False
             else:
-                send_msg(f'1С. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
+                send_msg(
+                    f'1С. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
                 return True
         except requests.exceptions.RequestException as e:
-            send_msg_error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка {e}')
-#            log.error(f'1С. Изменение: Ошибка {e} у сотрудника {employee.lastname, employee.firstname, employee.surname}')
+            send_msg_error(
+                f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка {e}')
+            #            log.error(f'1С. Изменение: Ошибка {e} у сотрудника {employee.lastname, employee.firstname, employee.surname}')
             return False
 
     def update_ad_and_bx24():
         # флаги Обновления
         AD_update = True
-        BX24_update = False 
-        
+        BX24_update = False
+
         name_atrr = {
             'sn': userData["B2"].value.encode('utf-8'),
             'givenName': userData["C2"].value.encode('utf-8'),
@@ -245,7 +254,7 @@ def change_user(file_path):
         }
         new_data = {
             "NAME": userData['C2'].value,
-            "LAST_NAME":  userData['B2'].value,
+            "LAST_NAME": userData['B2'].value,
             "UF_DEPARTMENT": userData['H2'].value,
             "ACTIVE": "Y",
             "WORK_POSITION": userData['J2'].value,
@@ -264,17 +273,18 @@ def change_user(file_path):
                                 conn.modify_s(user_dn, mod_attrs)
                                 send_msg(
                                     f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. обновление атрибута {attr_name}. Выполнено ")
-                                AD_update =  False
+                                AD_update = False
                                 return AD_update
                             except Exception as e:
-                                send_msg_error(f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
-#                                log.error(f'AD. Изменение: Ошибка при обновлении атрибута {attr_name} в домене у Сотрудника {employee.lastname, employee.firstname, employee.surname} - {e}')
+                                send_msg_error(
+                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
+                                #                                log.error(f'AD. Изменение: Ошибка при обновлении атрибута {attr_name} в домене у Сотрудника {employee.lastname, employee.firstname, employee.surname} - {e}')
                                 AD_update = False
                         else:
                             send_msg(
                                 f"AD. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
             else:
-                AD_update =  False
+                AD_update = False
         else:
             return AD_update
 
@@ -346,7 +356,6 @@ def change_user(file_path):
         return False
 
 
-    
 
 
 
