@@ -14,6 +14,8 @@ class SMConnect:
         self.role_id = self.config['SM']['role_id']
         self.connection = None
         self.cursor = None
+    def getRoleID(self):
+        return self.role_id
 
     def connect_SM(self):
         try:
