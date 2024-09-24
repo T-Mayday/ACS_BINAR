@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 # from message.message import send_msg, send_msg_error, log
 
@@ -12,7 +13,9 @@ chatID = bitrix_connector.chatID
 today = datetime.now()
 log = logging.getLogger("ADmain")
 log.setLevel(logging.DEBUG)
-fh = logging.FileHandler('.\\logs\\{:%Y-%m-%d}.log'.format(today))
+#fh = logging.FileHandler('.\\logs\\{:%Y-%m-%d}.log'.format(today))
+LOG_FILE = ".\\logs\\acs.log"
+fh = TimedRotatingFileHandler(LOG_FILE, when='midnight')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 log.addHandler(fh)

@@ -1,6 +1,7 @@
 from openpyxl import load_workbook
 import pandas as pd
 import ldap
+import ldap.modlist as modlist
 import requests
 import random
 import string
@@ -134,7 +135,7 @@ class Person:
             return f"{firstname.lower()}.{surname[0].lower()}.{lastname.lower()}"
         return None
 
-    def create_email(self, connector, login):
+    def create_email(self, login):
         return f"{login}@{connector.getAdress()}" if login else None
 
     def create_sm_login(self):
@@ -195,7 +196,7 @@ def create_user(file_path):
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
     company_department = userData['G2'].value
     post_job = userData['J2'].value
-    phone = userData['K2'].value if userData['K2'].value is None else 'not phone'
+    phone = userData['K2'].value if not (userData['K2'].value is None) else ''
 
     # Поиск друга сотрудника одной должности
     friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
@@ -220,13 +221,14 @@ def create_user(file_path):
     # Функция для создания пользователя в AD
     def create_in_AD(login_type):
         try:
-            dn = connector.getDn().format(login_type)
+            dn = connector.getNewUserDn().format(login_type)
+            user_dn = f"CN={login_type},{dn}"
             attrs = [
                 ('objectClass', [b'top', b'person', b'organizationalPerson', b'user']),
                 ('cn', [login_type.encode('utf-8')]),
                 ('givenName', [employee.firstname.encode('utf-8')]),
                 ('sAMAccountName', [login_type.encode('utf-8')]),
-                ('userPrincipalName', [login_type.encode('utf-8') + b'@binuu.local']),
+                ('userPrincipalName', [login_type.encode('utf-8') + b'@BINLTD.local']),
                 ('displayName', [login_type.encode('utf-8')]),
                 ('department', [userData['G2'].value.encode('utf-8')]),
                 ('mail', [employee.create_email(login_type).encode('utf-8')]),
@@ -241,23 +243,23 @@ def create_user(file_path):
                 ('pwdLastSet', [b'0']),
             ]
             if state == "1":
-                conn.add_s(dn, attrs)
-                created = search_in_AD(INN)
+#                ldif = modlist.addModlist(attrs)
+                conn.add_s(user_dn, attrs)
+                created = search_in_AD(INN, conn, base_dn)
                 if len(created) != 0:
                     send_msg(
-                        f"AD. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+                        f"AD. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
                     return True
                 else:
                     send_msg_error(
-                        f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Не выполнено")
-                    log.error(f'AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Не создал в домене')
+                        f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} {user_dn}. Не выполнено")
                     return False
             else:
                 send_msg(
-                    f"AD. Создание (Tест): Сотруднику {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+                    f"AD. Создание (Tест): Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
                 return True
         except Exception as e:
-            send_msg_error(f'AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}.Ошибка при создании {str(e)}')
+            send_msg_error(f'AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Ошибка при создании {user_dn} {attrs} {str(e)}')
             return False
 
     # Функция для создания пользователя в BX24
@@ -270,16 +272,17 @@ def create_user(file_path):
                 "UF_DEPARTMENT": userData['H2'].value,
                 "ACTIVE": "Y",
                 "WORK_POSITION": userData['J2'].value,
-                "PERSONAL_MOBILE": phone,
+#                "PERSONAL_MOBILE": phone,
                 "SECOND_NAME": employee.surname
             }
             if state == '1':
+                bx24.refresh_tokens()
                 createBX = bx24.call('user.add', user_data)
 
                 if createBX.get('error'):
                     error_message = createBX.get('error_description')
                     send_msg_error(
-                        f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Не выполнено. {error_message}")
+                        f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Не выполнено. {user_data} {error_message}")
                     return False
 
                 if createBX.get('result'):
@@ -321,7 +324,6 @@ def create_user(file_path):
                 else:
                     result = response.text
                     send_msg_error(f'1С. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Не выполнено. Ошибки - {response.status_code} {url} {data}')
-                    log.error(f'1CAPI данные {data} отправлены, результат {result}')
                     return False
             else:
                 send_msg(
@@ -350,9 +352,8 @@ def create_user(file_path):
 
     store_names = get_storeId()
 
-
     # Основная логика
-    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+    if flags['AD'] and flags['Normal_account']:
     # поиск по INN
         exists_in_AD = search_in_AD(INN, conn, base_dn)
         if len(exists_in_AD) == 0:
@@ -363,21 +364,18 @@ def create_user(file_path):
             if len(first_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.simple_login)
-                    bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}.Ошибка {e}')
             elif len(second_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.long_login)
-                    bx24_success = create_in_BX24(employee.create_email(employee.long_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} .Ошибка {e}')
             elif len(tried_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.full_login)
-                    bx24_success = create_in_BX24(employee.create_email(employee.full_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}.Ошибка {e}')
@@ -386,8 +384,27 @@ def create_user(file_path):
                 f'AD. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} Поиск по ИНН выдал что такой пользователь уже существует в AD ')
     else:
         ad_success = True
+        return ad_success
+
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+    # поиск по INN
+        exists_in_AD = search_in_AD(INN, conn, base_dn)
+        if exists_in_AD:
+            # поиск по логинам в AD
+            user_dn, user_info = exists_in_AD[0]
+            id_user_bx = user_info.get("pager", [None])[0]
+            if not id_user_bx or len(id_user_bx) <= 0:
+                try:
+                    bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
+                except Exception as e:
+                    send_msg_error(
+                        f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}. Ошибка {e}')
+        else:
+            send_msg_error(
+                f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} Поиск по ИНН выдал что такой пользователь уже существует в AD ')
+    else:
         bx24_success = True
-        return ad_success, bx24_success
+        return bx24_success
 
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         ZUP_value, RTL_value, ERP_value = (

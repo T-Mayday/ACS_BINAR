@@ -247,7 +247,9 @@ def blocking_user(file_path):
                     else:
                         send_msg(
                             f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-
+        else:
+            send_msg_error(
+                f'AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {INN}. Пользователь не найден в AD. Не выполнено.')
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
         if exists_in_AD:
             user_dn, user_info = exists_in_AD[0]
@@ -255,9 +257,17 @@ def blocking_user(file_path):
             if state == '1':
                 response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
                 if response:
-                    bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), **new_data, })
-                    send_msg(
-                        f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {id_user_bx.decode('utf-8')}. Выполнено")
+                    def block_user_bitrix(user_id):
+                        try:
+                            result = bx24.call('user.update', {
+                                'ID': user_id,
+                                'ACTIVE': 'N'
+                            })
+                            send_msg(
+                                f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
+                        except Exception as e:
+                            send_msg_error(f'BX24. Блокировка: Ошибка при блокировке пользователя в Битрикс24: {e}')
+                    block_user_bitrix(id_user_bx.decode('utf-8'))
                 else:
                     send_msg_error(f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')}. Не выполнено.")
                     # log.error(f"BX24. Блокировка: У сотрудника {employee.lastname, employee.firstname, employee.lastname} ID {id_user_bx.decode('utf-8')} не найден в Битрикс24.")
