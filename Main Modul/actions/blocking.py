@@ -127,7 +127,7 @@ class Person:
             return f"{firstname.lower()}.{surname[0].lower()}.{lastname.lower()}"
         return None
 
-    def create_email(self, connector, login):
+    def create_email(self, login):
         return f"{login}@{connector.getAdress()}" if login else None
 
     def create_sm_login(self):
