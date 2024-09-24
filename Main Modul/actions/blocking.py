@@ -127,7 +127,7 @@ class Person:
             return f"{firstname.lower()}.{surname[0].lower()}.{lastname.lower()}"
         return None
 
-    def create_email(self, connector, login):
+    def create_email(self, login):
         return f"{login}@{connector.getAdress()}" if login else None
 
     def create_sm_login(self):
@@ -255,9 +255,17 @@ def blocking_user(file_path):
             if state == '1':
                 response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
                 if response:
-                    bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), **new_data, })
-                    send_msg(
-                        f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {id_user_bx.decode('utf-8')}. Выполнено")
+                    def block_user_bitrix(user_id):
+                        try:
+                            result = bx24.call('user.update', {
+                                'ID': user_id,
+                                'ACTIVE': 'N'
+                            })
+                            send_msg(
+                                f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
+                        except Exception as e:
+                            send_msg_error(f'BX24. Блокировка: Ошибка при блокировке пользователя в Битрикс24: {e}')
+                    block_user_bitrix(id_user_bx.decode('utf-8'))
                 else:
                     send_msg_error(f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')}. Не выполнено.")
                     # log.error(f"BX24. Блокировка: У сотрудника {employee.lastname, employee.firstname, employee.lastname} ID {id_user_bx.decode('utf-8')} не найден в Битрикс24.")
