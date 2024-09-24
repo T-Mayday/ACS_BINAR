@@ -348,7 +348,7 @@ def change_user(file_path):
             }
             return send_in_1c(url, data)
         else:
-            True
+            return True
 
     if update_ad_and_bx24() and update_1c():
         return True

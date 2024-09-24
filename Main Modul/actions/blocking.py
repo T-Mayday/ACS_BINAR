@@ -257,7 +257,7 @@ def blocking_user(file_path):
                 if response:
                     bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), **new_data, })
                     send_msg(
-                        f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+                        f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {id_user_bx.decode('utf-8')}. Выполнено")
                 else:
                     send_msg_error(f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')}. Не выполнено.")
                     # log.error(f"BX24. Блокировка: У сотрудника {employee.lastname, employee.firstname, employee.lastname} ID {id_user_bx.decode('utf-8')} не найден в Битрикс24.")
