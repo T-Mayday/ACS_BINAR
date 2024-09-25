@@ -245,6 +245,7 @@ def blocking_user(file_path):
             user_dn, user_info = exists_in_AD[0]
             id_user_bx = user_info.get("pager", [None])[0]
             if state == '1':
+                bx24.refresh_tokens
                 response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
                 if response:
                     def block_user_bitrix(user_id):
