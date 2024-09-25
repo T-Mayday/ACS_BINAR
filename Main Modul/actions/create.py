@@ -276,7 +276,7 @@ def create_user(file_path):
                 "NAME": employee.firstname,
                 "LAST_NAME": employee.lastname,
                 "EMAIL": email,
-                "UF_DEPARTMENT": userData['H2'].value,
+                "UF_DEPARTMENT": int(userData['H2'].value),
                 "ACTIVE": "Y",
                 "WORK_POSITION": userData['J2'].value,
             }
