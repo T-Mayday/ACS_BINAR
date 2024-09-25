@@ -358,7 +358,7 @@ def create_user(file_path):
     store_names = get_storeId()
 
     # Основная логика
-    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+    if flags['AD'] and flags['Normal_account']:
     # поиск по INN
         exists_in_AD = search_in_AD(INN, conn, base_dn)
         if len(exists_in_AD) == 0:
@@ -371,8 +371,8 @@ def create_user(file_path):
             if len(first_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.simple_login)
-                    time.sleep(60)
-                    bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
+                    # time.sleep(60)
+                    # bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
 
                 except Exception as e:
                     send_msg_error(
@@ -380,16 +380,16 @@ def create_user(file_path):
             elif len(second_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.long_login)
-                    time.sleep(60)
-                    bx24_success = create_in_BX24(employee.create_email(employee.long_login))
+                    # time.sleep(60)
+                    # bx24_success = create_in_BX24(employee.create_email(employee.long_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} .Ошибка {e}')
             elif len(tried_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.full_login)
-                    time.sleep(60)
-                    bx24_success = create_in_BX24(employee.create_email(employee.full_login))
+                    # time.sleep(60)
+                    # bx24_success = create_in_BX24(employee.create_email(employee.full_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}.Ошибка {e}')
@@ -400,25 +400,25 @@ def create_user(file_path):
         ad_success = True
         return ad_success
 
-    # if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-    #     # поиск по INN
-    #     exists_in_AD = search_in_AD(INN, conn, base_dn)
-    #
-    #     if exists_in_AD:
-    #         user_dn, user_info = exists_in_AD[0]
-    #         id_user_bx = user_info.get("pager", [None])[0]
-    #         if not id_user_bx or len(id_user_bx) <= 0:
-    #             try:
-    #                 bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
-    #             except Exception as e:
-    #                 send_msg_error(
-    #                     f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}. Ошибка {e}')
-    #     else:
-    #         send_msg_error(
-    #             f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} Поиск по ИНН выдал что такой пользователь уже существует в AD ')
-    # else:
-    #     bx24_success = True
-    #     return bx24_success
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+        # поиск по INN
+        exists_in_AD = search_in_AD(INN, conn, base_dn)
+    
+        if exists_in_AD:
+            user_dn, user_info = exists_in_AD[0]
+            id_user_bx = user_info.get("pager", [None])[0]
+            if not id_user_bx or len(id_user_bx) <= 0:
+                try:
+                    bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
+                except Exception as e:
+                    send_msg_error(
+                        f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}. Ошибка {e}')
+        else:
+            send_msg_error(
+                f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} Поиск по ИНН выдал что такой пользователь уже существует в AD ')
+    else:
+        bx24_success = True
+        return bx24_success
 
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         # Поиск друга сотрудника одной должности

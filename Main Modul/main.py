@@ -48,7 +48,7 @@ def move_back():
                 shutil.move(file_path, input_dir)
 
 # Проверка валидации данных
-def validate_user_data(file_path):
+def validate_user_data(workbook):
     errors = []
     required_fields = {
         'inn': {'cell': 'A2', 'label': 'ИНН', 'check': lambda v: v and v.isdigit() and len(v) == 12,
@@ -66,10 +66,10 @@ def validate_user_data(file_path):
         'subdivision': {'cell': 'I2', 'label': 'Подразделение', 'check': lambda v: True},
 
         'position': {'cell': 'J2', 'label': 'Должность', 'check': lambda v: v, 'error': "Отсутствует должность."},
-        'mobile_number': {'cell': 'K2', 'label': 'Номер мобильного телефона', 'check': lambda v: True,
-                          'error': "Некорректный номер мобильного телефона."},
-        'birth_date': {'cell': 'L2', 'label': 'Дата рождения', 'check': lambda v: v,
-                       'error': "Отсутствует дата рождения."},
+        # 'mobile_number': {'cell': 'K2', 'label': 'Номер мобильного телефона', 'check': lambda v: True,
+        #                   'error': "Некорректный номер мобильного телефона."},
+        # 'birth_date': {'cell': 'L2', 'label': 'Дата рождения', 'check': lambda v: v,
+        #                'error': "Отсутствует дата рождения."},
         'status': {'cell': 'M2', 'label': 'Статус',
                    'check': lambda v: v in ['Создание', 'Изменение', 'Блокировка', 'Отпуск', 'больничный',
                                             'командировка'],
@@ -78,7 +78,7 @@ def validate_user_data(file_path):
     }
     user_data = {}
     try:
-        workbook = load_workbook(file_path).active
+#        workbook = load_workbook(file_path).active
         for field, props in required_fields.items():
             value = workbook[props['cell']].value
             user_data[field] = value
@@ -137,11 +137,11 @@ def main():
             for file in fnmatch.filter(files, "*.xlsx"):
                 log.info(os.path.join(root, file))
                 process_file(os.path.join(root, file))
-                time.sleep(120)
+#                time.sleep(120)
         # Функция переноса файла из waste
-        move_back()
 
         time.sleep(60)
+        move_back()
         print(datetime.now())            
 
 if __name__ == '__main__':
