@@ -48,7 +48,11 @@ def move_back():
                 shutil.move(file_path, input_dir)
 
 # Проверка валидации данных
+<<<<<<< HEAD
 def validate_user_data(workbook):
+=======
+def validate_user_data(worksheet):
+>>>>>>> 180332cbb23ad602a064d3f4c924b365b04e01cd
     errors = []
     required_fields = {
         'inn': {'cell': 'A2', 'label': 'ИНН', 'check': lambda v: v and v.isdigit() and len(v) == 12,
@@ -78,9 +82,12 @@ def validate_user_data(workbook):
     }
     user_data = {}
     try:
+<<<<<<< HEAD
 #        workbook = load_workbook(file_path).active
+=======
+>>>>>>> 180332cbb23ad602a064d3f4c924b365b04e01cd
         for field, props in required_fields.items():
-            value = workbook[props['cell']].value
+            value = worksheet[props['cell']].value
             user_data[field] = value
             if not props['check'](value):
                 errors.append(props['error'])
