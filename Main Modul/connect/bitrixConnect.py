@@ -5,7 +5,6 @@ from requests.auth import HTTPBasicAuth
 from pybitrix24 import Bitrix24
 
 
-
 class Bitrix24Connector:
     def __init__(self):
         self.config = configparser.ConfigParser()
@@ -16,6 +15,7 @@ class Bitrix24Connector:
         self.clientId = self.config.get('Bitrix24', 'clientId')
         self.clientSecret = self.config.get('Bitrix24', 'clientSecret')
         self.chatID = self.config.get('Bitrix24', 'chatID')
+        self.chatadmID = self.config.get('Bitrix24', 'chatadmID')
     def getChatID(self):
         return self.chatID
 

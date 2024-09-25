@@ -10,7 +10,7 @@ import string
 # подключение файла поиска
 from outher.search import user_verification, search_in_AD, search_login, find_jobfriend
 # подключение файла сообщений
-from message.message import send_msg, send_msg_error, log
+from message.message import send_msg, send_msg_error, send_msg_adm, log
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
 bitrix_connector = Bitrix24Connector()
@@ -212,6 +212,7 @@ def create_user(file_path):
 
     # Функция записи логина и пароля
     def save_login(phone_number, full_name , login, password):
+        send_msg_adm(f"{phone_number} {full_name} {login} {password}")
         file_path = 'logins.xlsx'
         try:
             workbook = load_workbook(file_path)
@@ -220,10 +221,10 @@ def create_user(file_path):
             workbook = Workbook()
             sheet = workbook.active
             sheet.append(['Номер телефона', 'ФИО', 'Логин', 'Пароль'])
-
         sheet.append([phone_number, full_name, login, password])
         workbook.save(file_path)
         workbook.close()
+
 
     # Функция для создания пользователя в AD
     def create_in_AD(login_type):
@@ -236,7 +237,8 @@ def create_user(file_path):
                 ('givenName', [employee.firstname.encode('utf-8')]),
                 ('sAMAccountName', [login_type.encode('utf-8')]),
                 ('userPrincipalName', [login_type.encode('utf-8') + b'@BINLTD.local']),
-                ('displayName', [login_type.encode('utf-8')]),
+#                ('displayName', [login_type.encode('utf-8')]),
+                ('displayName', [str(f"{employee.lastname} {employee.firstname} {employee.surname}").encode('utf-8')]),
                 ('department', [userData['G2'].value.encode('utf-8')]),
                 ('mail', [employee.create_email(login_type).encode('utf-8')]),
                 ('sn', [employee.lastname.encode('utf-8')]),
@@ -275,10 +277,11 @@ def create_user(file_path):
             user_data = {
                 "NAME": employee.firstname,
                 "LAST_NAME": employee.lastname,
+                "SECOND_NAME": employee.surname,
                 "EMAIL": email,
-                "UF_DEPARTMENT": userData['H2'].value,
+                "UF_DEPARTMENT": str(userData['H2'].value),
                 "ACTIVE": "Y",
-                "WORK_POSITION": userData['J2'].value,
+                "WORK_POSITION": str(userData['J2'].value),
             }
             if state == '1':
                 bx24.refresh_tokens()
@@ -302,7 +305,7 @@ def create_user(file_path):
                     if state == "1":
                         conn.modify_s(user_dn, attr)
                     send_msg(
-                        f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+                        f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} ID={user_id}. Выполнено")
                     return True
                 else:
                     send_msg_error(
@@ -408,6 +411,7 @@ def create_user(file_path):
             user_dn, user_info = exists_in_AD[0]
             id_user_bx = user_info.get("pager", [None])[0]
             if not id_user_bx or len(id_user_bx) <= 0:
+
                 try:
                     bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
                 except Exception as e:

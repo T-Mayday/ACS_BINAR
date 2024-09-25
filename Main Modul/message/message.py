@@ -9,6 +9,7 @@ from connect.bitrixConnect import Bitrix24Connector
 bitrix_connector = Bitrix24Connector()
 bx24, tokens = bitrix_connector.connect()
 chatID = bitrix_connector.chatID
+chatadmID = bitrix_connector.chatadmID
 
 today = datetime.now()
 log = logging.getLogger("ADmain")
@@ -39,3 +40,11 @@ def send_msg_error(msg):
     except Exception as e:
         log.exception(e)
 
+def send_msg_adm(msg):
+    global chatID
+    try:
+        log.info(msg)
+        bx24.refresh_tokens()
+        res = bx24.call('im.message.add', {'DIALOG_ID': chatadmID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
+    except Exception as e:
+        log.exception("Error sending message", e)

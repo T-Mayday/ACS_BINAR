@@ -213,9 +213,9 @@ def blocking_user(file_path):
                 else:
                     send_msg(f'1C. Блокировка (Тест) : Сотрудник {employee.lastname, employee.firstname, employee.surname} Выполнено')
             else:
-                return send_msg_error(f'1C. Блокировка. Ошибка : {response.status_code}')
+                return send_msg_error(f'1C. Блокировка. Ошибка: {url} {data} {response.status_code}')
         except requests.exceptions.RequestException as e:
-            return send_msg_error(f'1C. Блокировка. Ошибка: {e}')
+            return send_msg_error(f'1C. Блокировка. Ошибка: {url} {data}')
 
     if flags['AD'] and flags['Normal_account']:
         # поиск по INN
