@@ -4,6 +4,7 @@ import ldap
 import requests
 import random
 import string
+import time
 
 
 # подключение файла поиска
@@ -34,7 +35,6 @@ from connect.SMConnect import SMConnect
 sm_conn = SMConnect()
 sm_conn.connect_SM()
 test_role_id = sm_conn.getRoleID()
-
 
 
 # Матрица перевода
@@ -192,27 +192,13 @@ def blocking_user(file_path):
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
 
-    # Поиск друга сотрудника одной должности
-    friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
 
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
-    # поиск по INN
-    # exists_in_AD = search_in_AD(INN, conn,base_dn)
-
-    # # поиск по логинам в SM
-    # sm_login = sm_conn.user_exists(employee.sm_login) == -1
-    # sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
-    # sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
-
     name_atrr = {
         'userAccountControl': b'514'
     }
-    new_data = {
-        "ACTIVE": "N",
-    }
-
 
     # Функция для создания пользователя в 1C
     def send_in_1c(url, data):
@@ -230,7 +216,6 @@ def blocking_user(file_path):
                 return send_msg_error(f'1C. Блокировка. Ошибка : {response.status_code}')
         except requests.exceptions.RequestException as e:
             return send_msg_error(f'1C. Блокировка. Ошибка: {e}')
-
 
     if flags['AD'] and flags['Normal_account']:
         # поиск по INN
@@ -250,7 +235,12 @@ def blocking_user(file_path):
         else:
             send_msg_error(
                 f'AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {INN}. Пользователь не найден в AD. Не выполнено.')
+
+    time.sleep(60)
+
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+        # поиск по INN
+        exists_in_AD = search_in_AD(INN, conn, base_dn)
         if exists_in_AD:
             user_dn, user_info = exists_in_AD[0]
             id_user_bx = user_info.get("pager", [None])[0]
@@ -279,8 +269,12 @@ def blocking_user(file_path):
                 f'BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Пользователь не найден в AD. Не выполнено.')
             # log.error(f'BX24 и AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Поиск не нашел в домене сотрудника')
 
+    time.sleep(60)
 
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
+        # Поиск друга сотрудника одной должности
+        friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
+
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
         url = connector_1c.getUrlBlock()
@@ -293,9 +287,8 @@ def blocking_user(file_path):
         }
         send_in_1c(url,data)
 
-
     if flags['SM_GEN'] and flags['Normal_account']:
-    # поиск по логинам в SM
+        # поиск по логинам в SM
         sm_login      = sm_conn.user_exists(employee.sm_login) == -1
         sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
         sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1

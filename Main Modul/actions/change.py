@@ -1,3 +1,4 @@
+import time
 from openpyxl import load_workbook
 import pandas as pd
 import ldap
@@ -9,7 +10,7 @@ import string
 # from actions.create import create_user
 
 # подключение файла поиска
-from outher.search import user_verification, find_jobfriend, search_in_AD, search_login
+from outher.search import user_verification, find_jobfriend, search_in_AD
 
 # подключение файла сообщений
 from message.message import send_msg, send_msg_error, log
@@ -68,7 +69,7 @@ cipher_dict = {
 reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
 
 # Подключение файла create.py
-from actions.create import create_user
+# from actions.create import create_user
 
 
 # Функция для шифрование ИНН
@@ -191,26 +192,14 @@ def change_user(file_path):
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
-    company_department = userData['G2'].value
-    post_job = userData['J2'].value
-    phone = userData['K2'].value if userData['K2'].value is None else 'not phone'
 
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
 
-    # Поиск друга сотрудника одной должности
-    friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
 
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
-    # # поиск по логинам в AD
-    # first_login = search_login(employee.simple_login, conn, base_dn)
-    # second_login = search_login(employee.long_login, conn, base_dn)
-    # tried_login = search_login(employee.full_login, conn, base_dn)
-
-    # # поиск по INN
-    # exists_in_AD = search_in_AD(INN, conn, base_dn)
 
     # Функция для изменения пользователя в 1C
     def send_in_1c(url, data):
@@ -248,21 +237,15 @@ def change_user(file_path):
             'givenName': userData["C2"].value.encode('utf-8'),
             'department': userData["G2"].value.encode('utf-8'),
             'division': userData["I2"].value.encode('utf-8'),
-            'telephoneNumber': str(phone).encode('utf-8'),
             'company': userData["F2"].value.encode('utf-8'),
             'title': userData["J2"].value.encode('utf-8'),
         }
-        new_data = {
-            "NAME": userData['C2'].value,
-            "LAST_NAME": userData['B2'].value,
-            "UF_DEPARTMENT": userData['H2'].value,
-            "ACTIVE": "Y",
-            "WORK_POSITION": userData['J2'].value,
-            "PERSONAL_MOBILE": userData['K2'].value
-        }
+
+
+        # поиск по INN
+        exists_in_AD = search_in_AD(INN, conn, base_dn)
 
         if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-            exists_in_AD = search_in_AD(INN, conn, base_dn)
             if exists_in_AD:
                 user_dn, user_attrs = exists_in_AD[0]
                 for attr_name, attr_value in name_atrr.items():
@@ -273,7 +256,8 @@ def change_user(file_path):
                                 conn.modify_s(user_dn, mod_attrs)
                                 send_msg(
                                     f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. обновление атрибута {attr_name}. Выполнено ")
-                                AD_update = False
+                                AD_update = True
+                                time.sleep(60)
                                 return AD_update
                             except Exception as e:
                                 send_msg_error(
@@ -289,14 +273,22 @@ def change_user(file_path):
             return AD_update
 
         if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-            # поиск по логинам в AD
-            first_login = search_login(employee.simple_login, conn, base_dn)
-            second_login = search_login(employee.long_login, conn, base_dn)
-            tried_login = search_login(employee.full_login, conn, base_dn)
 
-            # поиск по INN
-            # exists_in_AD = search_in_AD(INN, conn, base_dn)
+            # поиск по логинам в AD
+            # first_login = search_login(employee.simple_login, conn, base_dn)
+            # second_login = search_login(employee.long_login, conn, base_dn)
+            # tried_login = search_login(employee.full_login, conn, base_dn)
+
             if exists_in_AD:
+
+                new_data = {
+                    "NAME": userData['C2'].value,
+                    "LAST_NAME": userData['B2'].value,
+                    "UF_DEPARTMENT": userData['H2'].value,
+                    "ACTIVE": "Y",
+                    "WORK_POSITION": userData['J2'].value
+                }
+
                 user_dn, user_info = exists_in_AD[0]
                 id_user_bx = user_info.get("pager", [None])[0]
                 if not id_user_bx or len(id_user_bx) <= 0:
@@ -309,9 +301,18 @@ def change_user(file_path):
                         bx24.refresh_tokens()
                         response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
                         if response:
-                            bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), **new_data})
-                            send_msg(
-                                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+                            # bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), new_data})
+                            def bitrix_call(user_id, new_data):
+                                try:
+                                    result = bx24.call('user.update', {'ID': user_id, **new_data})
+                                    send_msg(
+                                        f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
+                                    time.sleep(60)
+                                except Exception as e:
+                                    send_msg_error(
+                                        f'BX24. Изменение: Ошибка при изменение пользователя в Битрикс24: {e}')
+
+                            bitrix_call(id_user_bx.decode('utf-8'),new_data)
                             BX24_update = True
                             return BX24_update
                         else:
@@ -335,6 +336,9 @@ def change_user(file_path):
 
     def update_1c():
         if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
+            # Поиск друга сотрудника одной должности
+            friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
+
             ZUP_value, RTL_value, ERP_value = (
                 1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
