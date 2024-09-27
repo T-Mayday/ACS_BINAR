@@ -279,11 +279,7 @@ def create_user(file_path):
                 "LAST_NAME": employee.lastname,
                 "SECOND_NAME": employee.surname,
                 "EMAIL": email,
-<<<<<<< HEAD
                 "UF_DEPARTMENT": str(userData['H2'].value),
-=======
-                "UF_DEPARTMENT": int(userData['H2'].value),
->>>>>>> 0ec1d4a5d7cf0cee6233c97f127a0eb0e38d0809
                 "ACTIVE": "Y",
                 "WORK_POSITION": str(userData['J2'].value),
             }
@@ -423,7 +419,7 @@ def create_user(file_path):
                         f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}. Ошибка {e}')
         else:
             send_msg_error(
-                f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} Поиск по ИНН выдал что такой пользователь уже существует в AD ')
+                f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} Пользователь не найден в AD')
     else:
         bx24_success = True
         return bx24_success

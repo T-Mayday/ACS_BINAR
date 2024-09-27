@@ -250,6 +250,7 @@ def blocking_user(file_path):
                 if response:
                     def block_user_bitrix(user_id):
                         try:
+                            bx24.refresh_tokens
                             result = bx24.call('user.update', {
                                 'ID': user_id,
                                 'ACTIVE': 'N'

@@ -45,7 +45,7 @@ def move_back():
             if time.time() - os.path.getmtime(file_path) > 3600:
                 log.info(f"Перемещаем файл {file} обратно в input.")
 
-                shutil.move(file_path, input_dir)
+                move_file(file_path, input_dir)
 
 # Проверка валидации данных
 def validate_user_data(workbook):
@@ -123,7 +123,7 @@ def process_file(file_path):
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.25.09.2024'
+    ver = 'V.26.09.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'

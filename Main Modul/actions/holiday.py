@@ -93,38 +93,42 @@ def holiday(file_path):
 
     if flags['BX24'] and flags['Normal_account']:
         user_id = search_bx(lastname, firstname, surname)
-        if state == "1" and not (user_id is None):
-            if state_holiday.lower() in type_holiday:
-                result = type_holiday[state_holiday.lower()]
-                date = {
-                    'IBLOCK_TYPE_ID': 'bitrix_processes',
-                    'IBLOCK_ID': '52',
-                    'ELEMENT_CODE': random_string,
-                    'FIELDS': {
-                        'NAME': 'ОТПУСК',
-                        'CREATED_BY': f'{user_id}',
-                        'PROPERTY_320': f'{start_holiday}',
-                        'PROPERTY_322': f'{end_holiday}',
-                        'PROPERTY_324': [
-                            f'{result}'
-                        ]
+        if not (user_id is None):
+            if state == "1":
+                if state_holiday.lower() in type_holiday:
+                    result = type_holiday[state_holiday.lower()]
+                    date = {
+                        'IBLOCK_TYPE_ID': 'bitrix_processes',
+                        'IBLOCK_ID': '52',
+                        'ELEMENT_CODE': random_string,
+                        'FIELDS': {
+                            'NAME': 'ОТПУСК',
+                            'CREATED_BY': f'{user_id}',
+                            'PROPERTY_320': f'{start_holiday}',
+                            'PROPERTY_322': f'{end_holiday}',
+                            'PROPERTY_324': [
+                                f'{result}'
+                            ]
+                        }
                     }
-                }
-                try:
-                    bx24.refresh_tokens() 
-                    result = bx24.call('lists.element.add', date)
-                    if result.get('error'):
-                        error_message = result.get('error_description')
-                        send_msg_error(
-                            f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {error_message} {date}')
-                    if result.get('result'):
-                        send_msg(
-                            f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Выполнено')
-                except Exception as e:
-                    send_msg_error(f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {str(e)} {date}')
-                return result
+                    try:
+                        bx24.refresh_tokens() 
+                        result = bx24.call('lists.element.add', date)
+                        if result.get('error'):
+                            error_message = result.get('error_description')
+                            send_msg_error(
+                                f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {error_message} {date}')
+                        if result.get('result'):
+                            send_msg(
+                                f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Выполнено')
+                    except Exception as e:
+                        send_msg_error(f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {str(e)} {date}')
+                    return result
+            else:
+                send_msg(
+                    f'BX24.Отпуск (Тест): Сотрудник {lastname, firstname, surname}. Выполнено')
         else:
             send_msg(
-                f'BX24.Отпуск (Тест): Сотрудник {lastname, firstname, surname}. Выполнено')
+                f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Ошибка. Сотрудник не найден по ФИО.')
 
 
