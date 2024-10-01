@@ -183,6 +183,7 @@ def blocking_user(file_path):
 
     # подключение к ldap
     conn = connector.connect_ad()
+
     if not (bx24 and conn):
         send_msg('Блокировка.Ошибка подключения к AD и BX24')
 
@@ -191,7 +192,6 @@ def blocking_user(file_path):
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
-
 
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)

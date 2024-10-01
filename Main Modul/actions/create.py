@@ -225,7 +225,6 @@ def create_user(file_path):
         workbook.save(file_path)
         workbook.close()
 
-
     # Функция для создания пользователя в AD
     def create_in_AD(login_type):
         try:
@@ -362,7 +361,7 @@ def create_user(file_path):
 
     # Основная логика
     if flags['AD'] and flags['Normal_account']:
-    # поиск по INN
+        # поиск по INN
         exists_in_AD = search_in_AD(INN, conn, base_dn)
         if len(exists_in_AD) == 0:
             # поиск по логинам в AD
@@ -374,25 +373,18 @@ def create_user(file_path):
             if len(first_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.simple_login)
-                    # time.sleep(60)
-                    # bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
-
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}.Ошибка {e}')
             elif len(second_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.long_login)
-                    # time.sleep(60)
-                    # bx24_success = create_in_BX24(employee.create_email(employee.long_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} .Ошибка {e}')
             elif len(tried_login) == 0:
                 try:
                     ad_success = create_in_AD(employee.full_login)
-                    # time.sleep(60)
-                    # bx24_success = create_in_BX24(employee.create_email(employee.full_login))
                 except Exception as e:
                     send_msg_error(
                         f'AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname}.Ошибка {e}')
@@ -411,7 +403,6 @@ def create_user(file_path):
             user_dn, user_info = exists_in_AD[0]
             id_user_bx = user_info.get("pager", [None])[0]
             if not id_user_bx or len(id_user_bx) <= 0:
-
                 try:
                     bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
                 except Exception as e:
@@ -425,6 +416,7 @@ def create_user(file_path):
         return bx24_success
 
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
+
         # Поиск друга сотрудника одной должности
         friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
 
@@ -441,6 +433,7 @@ def create_user(file_path):
             'ZUP': ZUP_value,
             'job_friend': friendly
         }
+
         if state == '1':
             c1_success = send_in_1c(url, data)
             time.sleep(60)
@@ -452,7 +445,7 @@ def create_user(file_path):
         return c1_success
 
     if flags['SM_GEN'] and flags['Normal_account']:
-    # поиск по логинам в SM
+        # поиск по логинам в SM
         sm_login = sm_conn.user_exists(employee.sm_login) == -1
         sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
         sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
@@ -480,7 +473,7 @@ def create_user(file_path):
                 time.sleep(60)
             except Exception as e:
                 send_msg_error(
-                    f'СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname}')
+                    f'СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} - {e}')
         else:
             send_msg(
                 f'СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {sm_login}, {sm_long_login}, {sm_full_login} уже существуют')

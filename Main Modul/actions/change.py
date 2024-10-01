@@ -10,7 +10,7 @@ import string
 # from actions.create import create_user
 
 # подключение файла поиска
-from outher.search import user_verification, find_jobfriend, search_in_AD
+from outher.search import user_verification, find_jobfriend, search_in_AD, search_email_bx
 
 # подключение файла сообщений
 from message.message import send_msg, send_msg_error, log
@@ -241,6 +241,16 @@ def change_user(file_path):
             'title': userData["J2"].value.encode('utf-8'),
         }
 
+        def bitrix_call(user_id, new_data):
+            try:
+                bx24.refresh_tokens()
+                result = bx24.call('user.update', {'ID': user_id, **new_data})
+                send_msg(
+                    f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
+                time.sleep(60)
+            except Exception as e:
+                send_msg_error(f'BX24. Изменение: Ошибка при изменение пользователя в Битрикс24: {e}')
+
 
         # поиск по INN
         exists_in_AD = search_in_AD(INN, conn, base_dn)
@@ -262,7 +272,6 @@ def change_user(file_path):
                             except Exception as e:
                                 send_msg_error(
                                     f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
-                                #                                log.error(f'AD. Изменение: Ошибка при обновлении атрибута {attr_name} в домене у Сотрудника {employee.lastname, employee.firstname, employee.surname} - {e}')
                                 AD_update = False
                         else:
                             send_msg(
@@ -273,12 +282,6 @@ def change_user(file_path):
             return AD_update
 
         if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-
-            # поиск по логинам в AD
-            # first_login = search_login(employee.simple_login, conn, base_dn)
-            # second_login = search_login(employee.long_login, conn, base_dn)
-            # tried_login = search_login(employee.full_login, conn, base_dn)
-
             if exists_in_AD:
 
                 new_data = {
@@ -291,6 +294,9 @@ def change_user(file_path):
 
                 user_dn, user_info = exists_in_AD[0]
                 id_user_bx = user_info.get("pager", [None])[0]
+                email_ad = user_info.get('mail', [None])[0]
+
+
                 if not id_user_bx or len(id_user_bx) <= 0:
                     send_msg_error(
                         f'BX24. Изменение: У сотрудника {employee.lastname, employee.firstname, employee.surname} не записан ID BX24 в атрибуте pager AD')
@@ -298,23 +304,11 @@ def change_user(file_path):
                     return BX24_update
                 else:
                     if state == '1':
-                        bx24.refresh_tokens()
-                        response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
-                        if response:
-                            # bx24.call('user.update', {'ID': id_user_bx.decode('utf-8'), new_data})
-                            def bitrix_call(user_id, new_data):
-                                try:
-                                    result = bx24.call('user.update', {'ID': user_id, **new_data})
-                                    send_msg(
-                                        f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
-                                    time.sleep(60)
-                                except Exception as e:
-                                    send_msg_error(
-                                        f'BX24. Изменение: Ошибка при изменение пользователя в Битрикс24: {e}')
-
+                        ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
+                        if id_user_bx.decode('utf-8'):
                             bitrix_call(id_user_bx.decode('utf-8'),new_data)
-                            BX24_update = True
-                            return BX24_update
+                        elif ID_BX24:
+                            bitrix_call(id_user_bx.decode('utf-8'),new_data)
                         else:
                             pass
                             # send_msg_error(
@@ -326,9 +320,6 @@ def change_user(file_path):
                             f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
             else:
                 BX24_update = False
-                # send_msg(
-                #     f'КО Изменение: Cотрудник {employee.lastname, employee.firstname, employee.surname} не был найден в домене для изменения в BX24')
-
         if AD_update and BX24_update:
             return True
         else:

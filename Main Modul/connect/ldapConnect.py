@@ -19,6 +19,7 @@ class ActiveDirectoryConnector:
         self.dir_input = self.config.get('Domain', 'input')
         self.dir_output =self.config.get('Domain', 'output')
         self.dir_waste = self.config.get('Domain', 'waste')
+        self.dir_error = self.config.get('Domain', 'error')
 
     def getBaseDn(self):
         return self.base_dn
@@ -42,6 +43,8 @@ class ActiveDirectoryConnector:
         return self.dir_output
     def getWaste(self):
         return self.dir_waste
+    def getError(self):
+        return self.dir_error
     def connect_ad(self):
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         ldap.set_option(ldap.OPT_REFERRALS, 0)

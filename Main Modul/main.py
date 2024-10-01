@@ -13,6 +13,7 @@ connector = ActiveDirectoryConnector()
 input_dir = connector.getInput()
 output_dir = connector.getOutput()
 waste_dir = connector.getWaste()
+error_dir = connector.getError()
 
 # Подключение файла create.py
 from actions.create import create_user
@@ -70,6 +71,8 @@ def validate_user_data(workbook):
         #                   'error': "Некорректный номер мобильного телефона."},
         # 'birth_date': {'cell': 'L2', 'label': 'Дата рождения', 'check': lambda v: v,
         #                'error': "Отсутствует дата рождения."},
+        'mobile_number': {'cell': 'K2', 'label': 'Номер мобильного телефона', 'check': lambda v: v,
+                          'error': "Отсутствует номер мобильного телефона."},
         'status': {'cell': 'M2', 'label': 'Статус',
                    'check': lambda v: v in ['Создание', 'Изменение', 'Блокировка', 'Отпуск', 'больничный',
                                             'командировка'],
@@ -78,7 +81,6 @@ def validate_user_data(workbook):
     }
     user_data = {}
     try:
-#        workbook = load_workbook(file_path).active
         for field, props in required_fields.items():
             value = workbook[props['cell']].value
             user_data[field] = value
@@ -118,12 +120,17 @@ def process_file(file_path):
         elif action in ["Отпуск", "больничный", "командировка"]:
             holiday(file_path)
             move_file(file_path, output_dir)
+
+    except ValueError as ve:
+        move_file(file_path, error_dir)
+        send_msg(f'Ошибка валидации файла {file_path}: {str(ve)}')
+
     except Exception as e:
         move_file(file_path, waste_dir)
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.01.10.2024'
+    ver = 'V.02.10.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
@@ -138,8 +145,6 @@ def main():
             for file in fnmatch.filter(files, "*.xlsx"):
                 log.info(os.path.join(root, file))
                 process_file(os.path.join(root, file))
-#                time.sleep(120)
-        # Функция переноса файла из waste
 
         time.sleep(60)
         move_back()
