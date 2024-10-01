@@ -8,7 +8,7 @@ import time
 
 
 # подключение файла поиска
-from outher.search import user_verification, search_in_AD, find_jobfriend
+from outher.search import user_verification, search_in_AD, find_jobfriend, search_email_bx
 
 # подключение файла сообщений
 from message.message import send_msg, send_msg_error, log
@@ -200,7 +200,20 @@ def blocking_user(file_path):
         'userAccountControl': b'514'
     }
 
+    def block_user_bitrix(user_id):
+        try:
+            bx24.refresh_tokens()
+            result = bx24.call('user.update', {
+                'ID': user_id,
+                'ACTIVE': 'N'
+            })
+            send_msg(
+                f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
+        except Exception as e:
+            send_msg_error(f'BX24. Блокировка: Ошибка при блокировке пользователя в Битрикс24: {e}')
+
     # Функция для создания пользователя в 1C
+
     def send_in_1c(url, data):
         try:
             headers = {'Content-Type': 'application/json'}
@@ -241,35 +254,28 @@ def blocking_user(file_path):
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
         # поиск по INN
         exists_in_AD = search_in_AD(INN, conn, base_dn)
+
         if exists_in_AD:
             user_dn, user_info = exists_in_AD[0]
             id_user_bx = user_info.get("pager", [None])[0]
+            email_ad = user_info.get('mail', [None])[0]
+
             if state == '1':
-                bx24.refresh_tokens
-                response = bx24.call('user.get', {'ID': id_user_bx.decode('utf-8')})
-                if response:
-                    def block_user_bitrix(user_id):
-                        try:
-                            bx24.refresh_tokens
-                            result = bx24.call('user.update', {
-                                'ID': user_id,
-                                'ACTIVE': 'N'
-                            })
-                            send_msg(
-                                f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
-                        except Exception as e:
-                            send_msg_error(f'BX24. Блокировка: Ошибка при блокировке пользователя в Битрикс24: {e}')
+                bx24.refresh_tokens()
+                if id_user_bx:
                     block_user_bitrix(id_user_bx.decode('utf-8'))
+                elif email_ad:
+                    ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
+                    block_user_bitrix(ID_BX24)
                 else:
-                    send_msg_error(f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')}. Не выполнено.")
-                    # log.error(f"BX24. Блокировка: У сотрудника {employee.lastname, employee.firstname, employee.lastname} ID {id_user_bx.decode('utf-8')} не найден в Битрикс24.")
+                    send_msg_error(f"BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')} и MAIL:{email_ad.decode('utf-8')}. Не выполнено.")
+
             else:
                 send_msg(
                     f"BX24. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
             send_msg_error(
                 f'BX24. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Пользователь не найден в AD. Не выполнено.')
-            # log.error(f'BX24 и AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.lastname}. Поиск не нашел в домене сотрудника')
 
     time.sleep(60)
 

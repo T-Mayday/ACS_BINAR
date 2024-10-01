@@ -120,3 +120,17 @@ def search_bx(last_name,name,second_name):
     except Exception as e:
         send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")
         return None
+
+def search_email_bx(email):
+    try:
+        bx24.refresh_tokens()
+        result = bx24.call("user.get", {"EMAIL": email})
+        if result.get('result'):
+            r = result.get('result')[0]
+            return r.get('ID')
+        if result.get('error'):
+            print(f"BX24. Пользователь с {email} не найден. {result.get('error')[0]}")
+            return None
+    except Exception as e:
+        print(f"BX24. Ошибка при получении пользователей: {e}")
+        return None
