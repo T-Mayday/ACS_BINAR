@@ -436,8 +436,9 @@ def create_user(file_path):
 
         if state == '1':
             c1_success = send_in_1c(url, data)
-            time.sleep(60)
+#?            time.sleep(60)
         else:
+            c1_success = True
             send_msg(
                 f"1С. Создание (Тест): Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
     else:

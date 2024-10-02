@@ -71,8 +71,8 @@ def validate_user_data(workbook):
         #                   'error': "Некорректный номер мобильного телефона."},
         # 'birth_date': {'cell': 'L2', 'label': 'Дата рождения', 'check': lambda v: v,
         #                'error': "Отсутствует дата рождения."},
-        'mobile_number': {'cell': 'K2', 'label': 'Номер мобильного телефона', 'check': lambda v: v,
-                          'error': "Отсутствует номер мобильного телефона."},
+        # 'mobile_number': {'cell': 'K2', 'label': 'Номер мобильного телефона', 'check': lambda v: v,
+        #                   'error': "Отсутствует номер мобильного телефона."},
         'status': {'cell': 'M2', 'label': 'Статус',
                    'check': lambda v: v in ['Создание', 'Изменение', 'Блокировка', 'Отпуск', 'больничный',
                                             'командировка'],
@@ -114,7 +114,7 @@ def process_file(file_path):
             else:
                 raise ValueError("Ошибка при изменении пользователя")
         elif action == "Блокировка":
-            blocking_user(file_path)
+            bloсking = blocking_user(file_path)
             move_file(file_path, output_dir)
 
         elif action in ["Отпуск", "больничный", "командировка"]:

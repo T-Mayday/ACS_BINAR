@@ -21,7 +21,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, self.service_name)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка подключения: {self.username}@{self.service_name} {e}")
+            send_msg_error(f"SM^ Ошибка подключения: {self.username}@{self.service_name} {e}")
             raise
 
     def connect_SM_LOCAL(self, service_name):
@@ -30,7 +30,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, dsn)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            log(f"Ошибка подключения: {e}")
+            send_msg_error(f"SM LOCAL: Ошибка подключения: {e}")
             raise
 
     def close(self):
@@ -45,7 +45,7 @@ class SMConnect:
             result = self.cursor.fetchall() or []
             return result
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения запроса: {query} {e}")
+            send_msg_error(f"SM: Ошибка выполнения запроса: {query} {e}")
             return []
 
     def execute_update(self, query):
@@ -53,7 +53,7 @@ class SMConnect:
             self.cursor.execute(query)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения обновления: {query} {e}")
+            send_msg_error(f"SM: Ошибка выполнения обновления: {query} {e}")
             raise
 
     def execute_procedure(self, procedure_name, params):
@@ -61,7 +61,7 @@ class SMConnect:
             self.cursor.callproc(procedure_name, params)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка выполнения процедуры: {query} {e}")
+            send_msg_error(f"SM: Ошибка выполнения процедуры: {query} {e}")
             raise
 
     def user_exists(self, surname):
@@ -84,10 +84,12 @@ class SMConnect:
             END;
             """
             self.execute_update(query)
-            send_msg(f"SM Пользователь {username} успешно создан.")
+            send_msg(f"SM: Создание. Пользователь {username}. Выполено успешно.")
+            return True
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка при создании пользователя {username}: {e}")
-            raise
+            send_msg_error(f"SM: Создание. Пользователь {username}. Ошибка : {e}")
+#            raise
+            return False
 
     def block_user(self, login, user_id):
         try:
@@ -103,10 +105,12 @@ class SMConnect:
             END;
             """
             self.execute_update(query)
-            send_msg(f"SM Пользователь {login} с ID {user_id} успешно заблокирован.")
+            send_msg(f"SM Блокировка: {login} с ID {user_id}. Выполнено успешно.")
+            return True
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка при блокировке пользователя {login}: {e}")
-            raise
+            send_msg_error(f"SM Блокировка: {login} с ID {user_id}. Ошибка {e}")
+#            raise
+            return False
 
     def unblock_user(self, login, user_id):
         try:
@@ -122,10 +126,12 @@ class SMConnect:
             END;
             """
             self.execute_update(query)
-            send_msg(f"SM Пользователь {login} с ID {user_id} успешно разблокирован.")
+            send_msg(f"SM: Разблокировка. {login} с ID {user_id}. Выполнено успешно.")
+            return True
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка при разблокировке пользователя {login}: {e}")
-            raise
+            send_msg_error(f"SM: Разблокировка. {login} с ID {user_id}. Ошибка: {e}")
+#            raise
+            return False
 
     def get_store(self, store_id):
         try:
@@ -152,7 +158,7 @@ class SMConnect:
                 } if result else None
 
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Ошибка получения данных по store_id={store_id}: {e}")
+            send_msg_error(f"SM: Ошибка получения данных по store_id={store_id}: {e}")
             raise
 
     def create_user_in_local_db(self, dbname, user_login, user_password, user_role):
@@ -172,9 +178,11 @@ class SMConnect:
                 """, user_login=user_login, user_password=user_password, user_role=user_role)
 
                 local_connection.commit()
-                log.info(f"Пользователь {user_login} успешно создан в базе данных {dbname}.")
+                log.info(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname} успешно создан")
+                return True
         except Exception as e:
-            log.error(f"Не удалось создать пользователя {user_login} в базе данных {dbname}: {e}")
+            send_msg_error(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname}. Не удалось создать, ошибка: {e}")
+            return False
         finally:
             if local_connection:
                 local_connection.close()
