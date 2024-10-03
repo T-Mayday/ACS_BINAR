@@ -115,11 +115,17 @@ def process_file(file_path):
                 raise ValueError("Ошибка при изменении пользователя")
         elif action == "Блокировка":
             bloсking = blocking_user(file_path)
-            move_file(file_path, output_dir)
+            if bloсking:
+                move_file(file_path, output_dir)
+            else:
+                raise ValueError("Ошибка при блокировке пользователя")
 
         elif action in ["Отпуск", "больничный", "командировка"]:
-            holiday(file_path)
-            move_file(file_path, output_dir)
+            holiday_user = holiday(file_path)
+            if holiday_user:
+                move_file(file_path, output_dir)
+            else:
+                raise ValueError("Ошибка при назначении отпуска сотруднику")
 
     except ValueError as ve:
         move_file(file_path, error_dir)

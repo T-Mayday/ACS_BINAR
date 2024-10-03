@@ -168,22 +168,8 @@ class Person:
         return ''.join(random.sample(all_characters, len(all_characters)))
 
 
-# Инициализация флагов доступа
-flags = {
-    'AD': False,
-    'BX24': False,
-    'ZUP': False,
-    'RTL': False,
-    'ERP': False,
-    'SM_GEN': False,
-    'SM_LOCAL': False,
-    'Normal_account': False,
-    'Shop_account': False
-}
-
-
 def change_user(file_path):
-    global base_dn, state, flags
+    global base_dn, state
 
     userData = load_workbook(file_path).active
 
@@ -196,10 +182,8 @@ def change_user(file_path):
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
 
-
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
-
 
     # Функция для изменения пользователя в 1C
     def send_in_1c(url, data):
@@ -214,8 +198,7 @@ def change_user(file_path):
                 else:
                     result = response.text
                     send_msg_error(
-                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
-                    #                    log.error(f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Данные {data} отправлены, результат {result}')
+                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
                     return False
             else:
                 send_msg(
@@ -223,8 +206,7 @@ def change_user(file_path):
                 return True
         except requests.exceptions.RequestException as e:
             send_msg_error(
-                f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка {e}')
-            #            log.error(f'1С. Изменение: Ошибка {e} у сотрудника {employee.lastname, employee.firstname, employee.surname}')
+                f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}')
             return False
 
     def update_ad_and_bx24():
@@ -246,10 +228,10 @@ def change_user(file_path):
                 bx24.refresh_tokens()
                 result = bx24.call('user.update', {'ID': user_id, **new_data})
                 send_msg(
-                    f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} {result} {id_user_bx.decode('utf-8')}. Выполнено")
+                    f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
                 time.sleep(60)
             except Exception as e:
-                send_msg_error(f'BX24. Изменение: Ошибка при изменение пользователя в Битрикс24: {e}')
+                send_msg_error(f'BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}')
 
 
         # поиск по INN
@@ -267,12 +249,12 @@ def change_user(file_path):
                                 send_msg(
                                     f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. обновление атрибута {attr_name}. Выполнено ")
                                 AD_update = True
-                                time.sleep(60)
                                 return AD_update
                             except Exception as e:
                                 send_msg_error(
-                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
+                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
                                 AD_update = False
+                                return AD_update
                         else:
                             send_msg(
                                 f"AD. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
@@ -297,7 +279,7 @@ def change_user(file_path):
                 email_ad = user_info.get('mail', [None])[0]
 
 
-                if not id_user_bx or len(id_user_bx) <= 0:
+                if not id_user_bx or len(id_user_bx) or email_ad <= 0:
                     send_msg_error(
                         f'BX24. Изменение: У сотрудника {employee.lastname, employee.firstname, employee.surname} не записан ID BX24 в атрибуте pager AD')
                     BX24_update = False
@@ -305,6 +287,7 @@ def change_user(file_path):
                 else:
                     if state == '1':
                         ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
+
                         if id_user_bx.decode('utf-8'):
                             bitrix_call(id_user_bx.decode('utf-8'),new_data)
                         elif ID_BX24:

@@ -79,7 +79,6 @@ def encrypt_inn(inn):
     return encrypted_inn
 
 # Класс создания нужных атрибутов
-
 class Person:
     def __init__(self, firstname, lastname, surname):
         self.firstname = firstname
@@ -160,21 +159,9 @@ class Person:
         return ''.join(random.sample(all_characters, len(all_characters)))
 
 
-flags = {
-        'AD': False,
-        'BX24': False,
-        'ZUP': False,
-        'RTL': False,
-        'ERP': False,
-        'SM_GEN': False,
-        'SM_LOCAL': False,
-        'Normal_account': False,
-        'Shop_account': False
-    }
-
 
 def blocking_user(file_path):
-    global flags, base_dn, state, cipher_dict, reverse_cipher_dict, name_domain
+    global base_dn, state, cipher_dict, reverse_cipher_dict, name_domain
 
     userData = load_workbook(file_path).active
 
@@ -211,11 +198,10 @@ def blocking_user(file_path):
                 f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
             return True
         except Exception as e:
-            send_msg_error(f'BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname}. {user_id} {result}. Ошибка {e}')
+            send_msg_error(f'BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}')
             return False
 
     # Функция для создания пользователя в 1C
-
     def send_in_1c(url, data):
         try:
             headers = {'Content-Type': 'application/json'}
@@ -229,13 +215,14 @@ def blocking_user(file_path):
                     send_msg(f'1C. Блокировка (Тест) : {employee.lastname, employee.firstname, employee.surname} Выполнено')
                     return False
             else:
-                send_msg_error(f'1C. Блокировка. Ошибка: {url} {data} {response.status_code}') 
+                send_msg_error(f'1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data} {response.status_code}')
                 return False
         except requests.exceptions.RequestException as e:
-            send_msg_error(f'1C. Блокировка. Ошибка: {url} {data}')
+            send_msg_error(f'1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data}')
             return False
 
     ad_success = True
+
     if flags['AD'] and flags['Normal_account']:
         # поиск по INN
         exists_in_AD = search_in_AD(INN, conn,base_dn)
@@ -250,7 +237,7 @@ def blocking_user(file_path):
                             send_msg(
                                 f"AD. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Выполнено")
                         except:
-                            send_msg_error(f'AD. Блокировка. {employee.lastname, employee.firstname, employee.surname}. Ошибка: {e}') 
+                            send_msg_error(f'AD. Блокировка. {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка: {e}')
                             ad_success = False
                     else:
                         send_msg(
@@ -259,7 +246,7 @@ def blocking_user(file_path):
             send_msg_error(
                 f'AD. Блокировка: {employee.lastname, employee.firstname, employee.surname} {INN}. Пользователь не найден в AD. Не выполнено.')
 
-#?    time.sleep(60)
+
 
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
@@ -275,12 +262,15 @@ def blocking_user(file_path):
                 bx24.refresh_tokens()
                 if id_user_bx:
                     bx_success = block_user_bitrix(id_user_bx.decode('utf-8'))
+                    return bx_success
                 elif email_ad:
                     ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
                     bx_success = block_user_bitrix(ID_BX24)
+                    return bx_success
                 else:
                     bx_success = False
                     send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')} и MAIL:{email_ad.decode('utf-8')}. Не выполнено.")
+                    return bx_success
             else:
                 send_msg(
                     f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
@@ -290,7 +280,6 @@ def blocking_user(file_path):
             send_msg_error(
                 f'BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Пользователь не найден в AD. Не выполнено.')
 
-#?  time.sleep(60)
 
     c1_success = True
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
@@ -309,7 +298,6 @@ def blocking_user(file_path):
         }
         if state == '1':
             c1_success = send_in_1c(url, data)
-#?            time.sleep(60)
         else:
             c1_success = True
             send_msg(
@@ -318,7 +306,7 @@ def blocking_user(file_path):
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
         # поиск по логинам в SM
-        sm_login      = sm_conn.user_exists(employee.sm_login) == -1
+        sm_login = sm_conn.user_exists(employee.sm_login) == -1
         sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
         sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
         if sm_login:
@@ -331,8 +319,7 @@ def blocking_user(file_path):
                         f'СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Выполнено')
             except Exception as e:
                 sm_success = False
-                send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Не выполнено')
-                # log.error(f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
+                send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} {sm_login}. Не выполнено')
         elif sm_long_login:
             try:
                 if state == '1':
@@ -345,9 +332,7 @@ def blocking_user(file_path):
             except Exception as e:
                 sm_success = False
                 send_msg_error(
-                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_long_login}. Не выполнено')
-                # log.error(
-                #     f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
+                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено')
 
         elif sm_full_login:
             try:
@@ -361,16 +346,14 @@ def blocking_user(file_path):
             except Exception as e:
                 sm_success = False
                 send_msg_error(
-                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_full_login}. Не выполнено')
-                # log.error(
-                #     f'СуперМаг Глобальный: Ошибка при блокировке у сотрудника {employee.lastname, employee.firstname, employee.lastname}. Ошибка {str(e)}')
+                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено')
         else:
             send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Не выполнено')
-            # log.error(f'Поиск выдал что не по одному из логинов у сотрудника {employee.lastname, employee.firstname, employee.lastname} на должности {userData["G2"].value, userData["J2"].value} не нашел')
 
         sm_local_success = True
         if flags['SM_LOCAL'] and flags['Normal_account']:
             sm_local_success = True
+            return sm_local_success
     
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
         return True

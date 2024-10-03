@@ -31,20 +31,6 @@ def generate_random_string(length=12):
    return random_string
 
 
-
-flags = {
-        'AD': False,
-        'BX24': False,
-        'ZUP': False,
-        'RTL': False,
-        'ERP': False,
-        'SM_GEN': False,
-        'SM_LOCAL': False,
-        'Normal_account': False,
-        'Shop_account': False
-    }
-
-
 def holiday(file_path):
     global random_string, flags, state
 
@@ -66,9 +52,9 @@ def holiday(file_path):
                 date_obj = datetime.strptime(date, "%d.%m.%Y %H:%M:%S")
                 return date_obj.strftime("%d.%m.%Y")
             except ValueError:
-                raise ValueError("Invalid date format. Expected format: 'dd.mm.yyyy HH:MM:SS'")
+                raise ValueError("Неверный формат даты. Ожидаемый формат: 'dd.mm.yyyy HH:MM:SS'")
         else:
-            raise ValueError("Input must be a string or a datetime object")
+            raise ValueError("Входные данные должны быть строкой или объектом datetime.")
 
     lastname = excel_data['B2'].value
     firstname = excel_data['C2'].value
@@ -93,6 +79,7 @@ def holiday(file_path):
 
     if flags['BX24'] and flags['Normal_account']:
         user_id = search_bx(lastname, firstname, surname)
+
         if not (user_id is None):
             if state == "1":
                 if state_holiday.lower() in type_holiday:
@@ -118,17 +105,21 @@ def holiday(file_path):
                             error_message = result.get('error_description')
                             send_msg_error(
                                 f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {error_message} {date}')
+                            return False
                         if result.get('result'):
                             send_msg(
                                 f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Выполнено')
+                            return True
                     except Exception as e:
                         send_msg_error(f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {str(e)} {date}')
-                    return result
+                        return False
             else:
                 send_msg(
                     f'BX24.Отпуск (Тест): Сотрудник {lastname, firstname, surname}. Выполнено')
+                return True
         else:
             send_msg(
                 f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Ошибка. Сотрудник не найден по ФИО.')
+            return False
 
 
