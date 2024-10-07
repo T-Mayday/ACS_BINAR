@@ -1,4 +1,3 @@
-import time
 from openpyxl import load_workbook
 import pandas as pd
 import ldap
@@ -294,22 +293,41 @@ def change_user(file_path):
 
     bx_success = False
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-
         if simple_email:
             user_dn, user_info = simple_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
             if ID_BX24 and state == '1':
-                bx_success = bitrix_call(id_user_bx.decode('utf-8'), new_data)
+                bx_success = bitrix_call(ID_BX24.decode('utf-8'), new_data)
             else:
                 send_msg(
                     f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif:
-            pass
+        elif long_email:
+            user_dn, user_info = long_email[0]
+            email_ad = user_info.get('mail', [None])[0]
+            ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
+
+            if ID_BX24 and state == '1':
+                bx_success = bitrix_call(ID_BX24.decode('utf-8'), new_data)
+            else:
+                send_msg(
+                    f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        elif full_email:
+            user_dn, user_info = full_email[0]
+            email_ad = user_info.get('mail', [None])[0]
+            ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
+
+            if ID_BX24 and state == '1':
+                bx_success = bitrix_call(ID_BX24.decode('utf-8'), new_data)
+            else:
+                send_msg(
+                    f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
             bx_success = False
             return bx_success
-
+    else:
+        bx_success = True
+        return bx_success
 
     def update_1c():
         if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
@@ -331,7 +349,7 @@ def change_user(file_path):
         else:
             return True
 
-    if update_ad_and_bx24() and update_1c():
+    if ad_success and bx_success and update_1c():
         return True
     else:
         return False

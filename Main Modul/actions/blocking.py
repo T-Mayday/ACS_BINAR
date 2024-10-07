@@ -78,6 +78,7 @@ def encrypt_inn(inn):
             encrypted_inn += digit
     return encrypted_inn
 
+
 # Класс создания нужных атрибутов
 class Person:
     def __init__(self, firstname, lastname, surname):
@@ -99,7 +100,8 @@ class Person:
         result = []
         for item in text:
             if item.upper() in transliteration_dict:
-                result.append(transliteration_dict[item.upper()].upper() if item.isupper() else transliteration_dict[item.upper()].lower())
+                result.append(transliteration_dict[item.upper()].upper() if item.isupper() else transliteration_dict[
+                    item.upper()].lower())
             else:
                 result.append(item)
         return ''.join(result)
@@ -155,9 +157,9 @@ class Person:
         lower = random.choice(string.ascii_lowercase)
         upper = random.choice(string.ascii_uppercase)
         digit = random.choice(string.digits)
-        all_characters = lower + upper + digit + ''.join(random.choices(string.ascii_letters + string.digits, k=length - 3))
+        all_characters = lower + upper + digit + ''.join(
+            random.choices(string.ascii_letters + string.digits, k=length - 3))
         return ''.join(random.sample(all_characters, len(all_characters)))
-
 
 
 def blocking_user(file_path):
@@ -183,9 +185,26 @@ def blocking_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
-    name_atrr = {
+    block_attr = {
         'userAccountControl': b'514'
     }
+
+    def block_ad_user(conn, user, new_atrr):
+        user_dn, user_attrs = user[0]
+        for attr_name, attr_value in new_atrr.items():
+            if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
+                mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
+                try:
+                    conn.modify_s(user_dn, mod_attrs)
+                    log.info(
+                        f"AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+                    conn.unbind()
+                    return True
+                except Exception as e:
+                    log.info(
+                        f"AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено - ошибка {str(e)}")
+                    conn.unbind()
+                    return False
 
     def block_user_bitrix(user_id):
         try:
@@ -222,63 +241,71 @@ def blocking_user(file_path):
             return False
 
     ad_success = True
-
     if flags['AD'] and flags['Normal_account']:
-        # поиск по INN
-        exists_in_AD = search_in_AD(INN, conn,base_dn)
-        if exists_in_AD:
-            user_dn, user_attrs = exists_in_AD[0]
-            for attr_name, attr_value in name_atrr.items():
-                if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
-                    mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
-                    if state == '1':
-                        try:
-                            conn.modify_s(user_dn, mod_attrs)   
-                            send_msg(
-                                f"AD. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-                        except:
-                            send_msg_error(f'AD. Блокировка. {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка: {e}')
-                            ad_success = False
-                    else:
-                        send_msg(
-                            f"AD. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        simple_email = search_in_AD(employee.create_email(employee.simple_login), conn, base_dn)
+        long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
+        full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
+
+        if simple_email:
+            if state == '1':
+                ad_success = block_ad_user(conn, simple_email, block_attr)
+            else:
+                send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        elif long_email:
+            if state == '1':
+                ad_success = block_ad_user(conn, long_email, block_attr)
+            else:
+                send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        elif full_email:
+            if state == '1':
+                ad_success = block_ad_user(conn, full_email, block_attr)
+            else:
+                send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
             send_msg_error(
-                f'AD. Блокировка: {employee.lastname, employee.firstname, employee.surname} {INN}. Пользователь не найден в AD. Не выполнено.')
-
+                f'AD. Блокировка: {employee.lastname, employee.firstname, employee.surname} {simple_email, long_email, full_email}. Пользователь не найден в AD. Не выполнено.')
+    else:
+        ad_success == True
+        return ad_success
 
 
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        # поиск по INN
-        exists_in_AD = search_in_AD(INN, conn, base_dn)
+        simple_email = search_in_AD(employee.create_email(employee.simple_login), conn, base_dn)
+        long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
+        full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
 
-        if exists_in_AD:
-            user_dn, user_info = exists_in_AD[0]
-            id_user_bx = user_info.get("pager", [None])[0]
-            email_ad = user_info.get('mail', [None])[0]
-
+        if simple_email:
             if state == '1':
                 bx24.refresh_tokens()
-                if id_user_bx:
-                    bx_success = block_user_bitrix(id_user_bx.decode('utf-8'))
-                    return bx_success
-                elif email_ad:
-                    ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
-                    bx_success = block_user_bitrix(ID_BX24)
-                    return bx_success
-                else:
-                    bx_success = False
-                    send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname}. ID={id_user_bx.decode('utf-8')} и MAIL:{email_ad.decode('utf-8')}. Не выполнено.")
-                    return bx_success
+                ID_BX24 = search_email_bx(employee.create_email(employee.simple_login))
+                bx_success = block_user_bitrix(ID_BX24)
+            else:
+                send_msg(
+                    f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        elif long_email:
+            if state == '1':
+                bx24.refresh_tokens()
+                ID_BX24 = search_email_bx(employee.create_email(employee.long_login))
+                bx_success = block_user_bitrix(ID_BX24)
+            else:
+                send_msg(
+                    f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        elif full_email:
+            if state == '1':
+                bx24.refresh_tokens()
+                ID_BX24 = search_email_bx(employee.create_email(employee.full_login))
+                bx_success = block_user_bitrix(ID_BX24)
             else:
                 send_msg(
                     f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
-# поиск по ФИО?
             bx_success = True
             send_msg_error(
                 f'BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Пользователь не найден в AD. Не выполнено.')
+    else:
+        bx24_success = True
+        return bx24_success
 
 
     c1_success = True
@@ -319,7 +346,7 @@ def blocking_user(file_path):
                         f'СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Выполнено')
             except Exception as e:
                 sm_success = False
-                send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} {sm_login}. Не выполнено')
+                send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_login}. Не выполнено')
         elif sm_long_login:
             try:
                 if state == '1':
@@ -332,7 +359,7 @@ def blocking_user(file_path):
             except Exception as e:
                 sm_success = False
                 send_msg_error(
-                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено')
+                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено')
 
         elif sm_full_login:
             try:
@@ -346,7 +373,7 @@ def blocking_user(file_path):
             except Exception as e:
                 sm_success = False
                 send_msg_error(
-                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено')
+                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено')
         else:
             send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Не выполнено')
 

@@ -97,7 +97,8 @@ def process_file(file_path):
 
         errors, user_data = validate_user_data(workbook)
         if errors:
-            raise ValueError(f"Ошибки валидации: {', '.join(errors)}")
+            move_file(file_path,error_dir)
+            send_msg(f"Ошибки валидации: {', '.join(errors)}")
 
         action = user_data.get("status")
 
@@ -126,11 +127,6 @@ def process_file(file_path):
                 move_file(file_path, output_dir)
             else:
                 raise ValueError("Ошибка при назначении отпуска сотруднику")
-
-    except ValueError as ve:
-        move_file(file_path, error_dir)
-        send_msg(f'Ошибка валидации файла {file_path}: {str(ve)}')
-
     except Exception as e:
         move_file(file_path, waste_dir)
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')

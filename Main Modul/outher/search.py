@@ -48,8 +48,6 @@ def search_pager(mail, conn, base_dn):
         return []
 
 
-
-
 def user_verification(df_roles, df_users):
 
     flags = {
