@@ -8,7 +8,7 @@ import random
 import string
 
 # подключение файла поиска
-from outher.search import user_verification, search_in_AD, search_login, find_jobfriend
+from outher.search import user_verification, search_in_AD, search_login, find_jobfriend, search_pager
 # подключение файла сообщений
 from message.message import send_msg, send_msg_error, send_msg_adm, log
 # Подключение BitrixConnect
@@ -75,8 +75,6 @@ def encrypt_inn(inn):
             log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
             encrypted_inn += digit
     return encrypted_inn
-
-
 # Функция для расшифрование ИНН
 def decrypt_inn(encrypted_inn):
     decrypted_inn = ''
@@ -231,6 +229,7 @@ def create_user(file_path):
                 ('employeeID', [str(INN).encode('utf-8')]),
                 ('company', [userData['F2'].value.encode('utf-8')]),
                 ('userAccountControl', [b'512']),
+                ('pager',str('1').encode('utf-8')),
                 ('middleName', [employee.surname.encode('utf-8')]),
                 ('title', [userData['J2'].value.encode('utf-8')]),
                 ('userPassword', [employee.password.encode()]),
@@ -247,14 +246,14 @@ def create_user(file_path):
                     return True
                 else:
                     send_msg_error(
-                        f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. {user_dn}. Не выполнено")
+                        f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_dn}. Не выполнено")
                     return False
             else:
                 send_msg(
                     f"AD. Создание (Tест): Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
                 return True
         except Exception as e:
-            send_msg_error(f'AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка при создании {user_dn} {attrs} {str(e)}')
+            send_msg_error(f'AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при создании {user_dn} {attrs} {str(e)}')
             return False
 
     # Функция для создания пользователя в BX24
@@ -276,12 +275,12 @@ def create_user(file_path):
                 if createBX.get('error'):
                     error_message = createBX.get('error_description')
                     send_msg_error(
-                        f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. {user_data} {error_message}")
+                        f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. {user_data} {error_message}")
                     return False
 
                 if createBX.get('result'):
                     user_id = createBX.get('result')
-                    search_filter = f"(employeeID={INN})"
+                    search_filter = f"(mail={email})"
                     search_base = connector.getSearchBase()
                     result = conn.search_s(search_base, ldap.SCOPE_SUBTREE, search_filter)
 
@@ -348,59 +347,66 @@ def create_user(file_path):
 
     # Основная логика
     if flags['AD'] and flags['Normal_account']:
-        # поиск по INN
-        exists_in_AD = search_in_AD(INN, conn, base_dn)
-        if len(exists_in_AD) == 0:
-            # поиск по логинам в AD
+        simple_email = search_in_AD(employee.create_email(employee.simple_login), conn,base_dn)
+        long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
+        full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
+        if len(simple_email) == 0:
+            try:
+                ad_success = create_in_AD(employee.simple_login)
+            except Exception as e:
+                send_msg_error(
+                    f'AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}')
 
-            first_login = search_login(employee.simple_login, conn, base_dn)
-            second_login = search_login(employee.long_login, conn, base_dn)
-            tried_login = search_login(employee.full_login, conn, base_dn)
+        elif len(long_email) == 0:
+            try:
+                ad_success = create_in_AD(employee.long_login)
+            except Exception as e:
+                send_msg_error(
+                    f'AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}')
 
-            if len(first_login) == 0:
-                try:
-                    ad_success = create_in_AD(employee.simple_login)
-                except Exception as e:
-                    send_msg_error(
-                        f'AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}.Ошибка {e}')
-            elif len(second_login) == 0:
-                try:
-                    ad_success = create_in_AD(employee.long_login)
-                except Exception as e:
-                    send_msg_error(
-                        f'AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}.Ошибка {e}')
-            elif len(tried_login) == 0:
-                try:
-                    ad_success = create_in_AD(employee.full_login)
-                except Exception as e:
-                    send_msg_error(
-                        f'AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}.Ошибка {e}')
+        elif len(full_email) == 0:
+            try:
+                ad_success = create_in_AD(employee.full_login)
+            except Exception as e:
+                send_msg_error(
+                    f'AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}')
         else:
             send_msg_error(
-                f'AD. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Поиск по ИНН выдал что такой пользователь уже существует в AD ')
+                f'AD. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Поиск по mail выдал что такой пользователь уже существует в AD ')
     else:
         ad_success = True
         return ad_success
 
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        # поиск по INN
-        exists_in_AD = search_in_AD(INN, conn, base_dn)
-    
-        if exists_in_AD:
-            user_dn, user_info = exists_in_AD[0]
-            id_user_bx = user_info.get("pager", [None])[0]
-            if not id_user_bx or len(id_user_bx) <= 0:
-                try:
-                    bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
-                except Exception as e:
-                    send_msg_error(
-                        f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} Ошибка {e}')
+        first_pager = search_pager(employee.create_email(employee.simple_login), conn, base_dn)
+        second_pager = search_pager(employee.create_email(employee.long_login), conn, base_dn)
+        three_pager = search_pager(employee.create_email(employee.full_login), conn, base_dn)
+
+        if first_pager == '1':
+            try:
+                bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
+            except Exception as e:
+                send_msg_error(
+                    f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}')
+        elif second_pager == "1":
+            try:
+                bx24_success = create_in_BX24(employee.create_email(employee.long_login))
+            except Exception as e:
+                send_msg_error(
+                    f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}')
+        elif three_pager == '1':
+            try:
+                bx24_success = create_in_BX24(employee.create_email(employee.full_login))
+            except Exception as e:
+                send_msg_error(
+                    f'BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}')
         else:
             send_msg_error(
-                f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Пользователь не найден в AD')
+                f'BX24. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Пользователь не найден в AD')
     else:
         bx24_success = True
         return bx24_success
+
 
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
 
@@ -443,7 +449,7 @@ def create_user(file_path):
 
             except Exception as e:
                 send_msg_error(
-                    f'СуперМаг Глобальный. Создание: Ошибка при создании первичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} - {e}')
+                    f'СуперМаг Глобальный. Создание: Ошибка при создании первичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}')
         elif sm_long_login:
             try:
                 sm_success = sm_conn.create_user(sm_long_login, employee.password, test_role_id)
@@ -451,7 +457,7 @@ def create_user(file_path):
 
             except Exception as e:
                 send_msg_error(
-                    f'СуперМаг Глобальный. Создание: Ошибка при создании вторичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} - {e}')
+                    f'СуперМаг Глобальный. Создание: Ошибка при создании вторичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}')
 
         elif sm_full_login:
             try:
@@ -460,7 +466,7 @@ def create_user(file_path):
 
             except Exception as e:
                 send_msg_error(
-                    f'СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value} - {e}')
+                    f'СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}')
         else:
             send_msg(
                 f'СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {sm_login}, {sm_long_login}, {sm_full_login} уже существуют')

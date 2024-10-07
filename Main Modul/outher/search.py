@@ -10,15 +10,44 @@ bitrix_connector = Bitrix24Connector()
 bx24, tokens = bitrix_connector.connect()
 
 
-def search_in_AD(INN, conn, base_dn):
-#    search_filter = f"(employeeID={INN})"
-    search_filter = "(employeeID=%s)" % (ldap.filter.escape_filter_chars(INN))
+def search_in_AD(mail, conn, base_dn):
+    search_filter = f"(mail={mail})"
+    # search_filter = "(employeeID=%s)" % (ldap.filter.escape_filter_chars(INN))
     try:
         result = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, search_filter)
-        return result
+        if result and len(result) > 0:
+            user_dn, attributes = result[0]
+            user_account_control = attributes.get('userAccountControl', [b''])[0]
+            uac_value = int(user_account_control.decode())
+            is_active = not (uac_value & 0x0002)
+
+            pager = attributes.get('pager',[b''])[0].decode('utf-8')
+            if is_active:
+                return result,
+            else:
+                return []
     except Exception as e:
-        send_msg_error(f'LDAP Ошибка поиcка по employeeID: {search_filter} {str(e)} ')
+        send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
         return []
+
+def search_pager(mail, conn, base_dn):
+    search_filter = f"(mail={mail})"
+    # search_filter = "(employeeID=%s)" % (ldap.filter.escape_filter_chars(INN))
+    try:
+        result = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, search_filter)
+        if result and len(result) > 0:
+            user_dn, attributes = result[0]
+
+            pager = attributes.get('pager',[b''])[0].decode('utf-8')
+            if pager:
+                return pager
+            else:
+                return []
+    except Exception as e:
+        send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
+        return []
+
+
 
 
 def user_verification(df_roles, df_users):
@@ -87,15 +116,6 @@ def find_jobfriend(post_job, codeBX24):
         return f"{employee_info['LAST_NAME']} {employee_info['NAME']} {employee_info['SECOND_NAME']}"
     return None
 
-
-def search_login(login, conn, base_dn):
-    search_filter = f'(sAMAccountName={login})'
-    try:
-        result = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, search_filter)
-        return result
-    except Exception as e:
-        log.error(f'Ошибка поиска логина - {str(e)}')
-        return []
 
 # Функция для получения всех пользователей
 def get_all_users():

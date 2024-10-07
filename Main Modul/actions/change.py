@@ -171,6 +171,7 @@ class Person:
 def change_user(file_path):
     global base_dn, state
 
+
     userData = load_workbook(file_path).active
 
     df_users = pd.read_excel(file_path)
@@ -184,6 +185,54 @@ def change_user(file_path):
 
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
+
+    # Новые данные
+    name_atrr = {
+        'sn': userData["B2"].value.encode('utf-8'),
+        'givenName': userData["C2"].value.encode('utf-8'),
+        'department': userData["G2"].value.encode('utf-8'),
+        'division': userData["I2"].value.encode('utf-8'),
+        'company': userData["F2"].value.encode('utf-8'),
+        'title': userData["J2"].value.encode('utf-8'),
+    }
+
+    new_data = {
+        "NAME": userData['C2'].value,
+        "LAST_NAME": userData['B2'].value,
+        "UF_DEPARTMENT": userData['H2'].value,
+        "ACTIVE": "Y",
+        "WORK_POSITION": userData['J2'].value
+    }
+
+
+    def update_ad_attributes(conn, user, new_atrr):
+        user_dn, user_attrs = user[0]
+        for attr_name, attr_value in new_atrr.items():
+            if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
+                mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
+                try:
+                    conn.modify_s(user_dn, mod_attrs)
+                    log.info(
+                        f"AD. Изменение: Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Обновление атрибута {attr_name}. Выполнено"
+                    )
+                    return True
+                except Exception as e:
+                    log.info(
+                        f"AD. Изменение: Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name}: {str(e)}"
+                    )
+                    return False
+
+    def bitrix_call(user_id, new_data):
+        try:
+            bx24.refresh_tokens()
+            result = bx24.call('user.update', {'ID': user_id, **new_data})
+            send_msg(
+                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
+            return True
+        except Exception as e:
+            send_msg_error(
+                f'BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}')
+            return False
 
     # Функция для изменения пользователя в 1C
     def send_in_1c(url, data):
@@ -209,104 +258,58 @@ def change_user(file_path):
                 f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}')
             return False
 
-    def update_ad_and_bx24():
-        # флаги Обновления
-        AD_update = True
-        BX24_update = False
+    ad_success = False
+    if flags['AD'] and flags['Normal_account']:
+        simple_email = search_in_AD(employee.create_email(employee.simple_login), conn, base_dn)
+        long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
+        full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
 
-        name_atrr = {
-            'sn': userData["B2"].value.encode('utf-8'),
-            'givenName': userData["C2"].value.encode('utf-8'),
-            'department': userData["G2"].value.encode('utf-8'),
-            'division': userData["I2"].value.encode('utf-8'),
-            'company': userData["F2"].value.encode('utf-8'),
-            'title': userData["J2"].value.encode('utf-8'),
-        }
+        if simple_email:
+            if state == '1':
+                ad_success = update_ad_attributes(conn, simple_email, name_atrr)
+            else:
+                log.info(
+                    f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
+                )
+        elif long_email:
+            if state == '1':
+                ad_success = update_ad_attributes(conn, long_email, name_atrr)
+            else:
+                log.info(
+                    f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
+                )
+        elif full_email:
+            if state == '1':
+                ad_success = update_ad_attributes(conn, full_email, name_atrr)
+            else:
+                log.info(
+                    f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
+                )
+        else:
+            ad_success = False
+            return ad_success
+    else:
+        ad_success = True
+        return ad_success
 
-        def bitrix_call(user_id, new_data):
-            try:
-                bx24.refresh_tokens()
-                result = bx24.call('user.update', {'ID': user_id, **new_data})
+    bx_success = False
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+
+        if simple_email:
+            user_dn, user_info = simple_email[0]
+            email_ad = user_info.get('mail', [None])[0]
+            ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
+            if ID_BX24 and state == '1':
+                bx_success = bitrix_call(id_user_bx.decode('utf-8'), new_data)
+            else:
                 send_msg(
-                    f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
-                time.sleep(60)
-            except Exception as e:
-                send_msg_error(f'BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}')
-
-
-        # поиск по INN
-        exists_in_AD = search_in_AD(INN, conn, base_dn)
-
-        if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-            if exists_in_AD:
-                user_dn, user_attrs = exists_in_AD[0]
-                for attr_name, attr_value in name_atrr.items():
-                    if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
-                        mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
-                        if state == '1':
-                            try:
-                                conn.modify_s(user_dn, mod_attrs)
-                                send_msg(
-                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. обновление атрибута {attr_name}. Выполнено ")
-                                AD_update = True
-                                return AD_update
-                            except Exception as e:
-                                send_msg_error(
-                                    f"AD. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка при обновлении атрибута {attr_name} {str(e)}")
-                                AD_update = False
-                                return AD_update
-                        else:
-                            send_msg(
-                                f"AD. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-            else:
-                AD_update = False
+                    f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+        elif:
+            pass
         else:
-            return AD_update
+            bx_success = False
+            return bx_success
 
-        if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-            if exists_in_AD:
-
-                new_data = {
-                    "NAME": userData['C2'].value,
-                    "LAST_NAME": userData['B2'].value,
-                    "UF_DEPARTMENT": userData['H2'].value,
-                    "ACTIVE": "Y",
-                    "WORK_POSITION": userData['J2'].value
-                }
-
-                user_dn, user_info = exists_in_AD[0]
-                id_user_bx = user_info.get("pager", [None])[0]
-                email_ad = user_info.get('mail', [None])[0]
-
-
-                if not id_user_bx or len(id_user_bx) or email_ad <= 0:
-                    send_msg_error(
-                        f'BX24. Изменение: У сотрудника {employee.lastname, employee.firstname, employee.surname} не записан ID BX24 в атрибуте pager AD')
-                    BX24_update = False
-                    return BX24_update
-                else:
-                    if state == '1':
-                        ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
-
-                        if id_user_bx.decode('utf-8'):
-                            bitrix_call(id_user_bx.decode('utf-8'),new_data)
-                        elif ID_BX24:
-                            bitrix_call(id_user_bx.decode('utf-8'),new_data)
-                        else:
-                            pass
-                            # send_msg_error(
-                            #     f"КО Изменение: Сотрудника {employee.lastname, employee.firstname, employee.surname} с ID {id_user_bx.decode('utf-8')} не существует в BX24")
-                            # BX24_update = False
-                            # return BX24_update
-                    else:
-                        send_msg(
-                            f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-            else:
-                BX24_update = False
-        if AD_update and BX24_update:
-            return True
-        else:
-            return False
 
     def update_1c():
         if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
