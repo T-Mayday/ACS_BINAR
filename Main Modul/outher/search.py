@@ -147,8 +147,8 @@ def search_email_bx(email):
             r = result.get('result')[0]
             return r.get('ID')
         if result.get('error'):
-            print(f"BX24. Пользователь с {email} не найден. {result.get('error')[0]}")
+            send_msg_error(f"BX24. Пользователь с {email} не найден. {result.get('error')[0]}")
             return None
     except Exception as e:
-        print(f"BX24. Ошибка при получении пользователей: {e}")
+        send_msg_error(f"BX24. Ошибка при получении пользователей: {e}")
         return None

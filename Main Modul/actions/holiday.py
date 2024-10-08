@@ -119,19 +119,19 @@ def holiday(file_path):
                             bx24_success = False
                             error_message = result.get('error_description')
                             send_msg_error(
-                                f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {error_message} {date}')
+                                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {error_message} {date}")
                         if result.get('result'):
                             send_msg(
-                                f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено')
+                                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")
                     except Exception as e:
                         bx24_success = False
-                        send_msg_error(f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {str(e)} {date}')
+                        send_msg_error(f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {str(e)} {date}")
                     return result
             else:
                 send_msg(
-                    f'BX24. {state_holiday.upper()} (Тест): Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено')
+                    f"BX24. {state_holiday.upper()} (Тест): Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")
         else:
             send_msg(
-                f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Ошибка. Сотрудник не найден по ФИО.')
+                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Ошибка. Сотрудник не найден по ФИО.")
     return bx24_success
 

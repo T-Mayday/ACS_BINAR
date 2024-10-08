@@ -226,11 +226,15 @@ def change_user(file_path):
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
             send_msg(
-                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
+                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. {result}. Выполнено")
             return True
         except Exception as e:
             send_msg_error(
+<<<<<<< HEAD
                 f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
+=======
+                f'BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка при изменение пользователя в Битрикс24: {e}')
+>>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
             return False
 
     # Функция для изменения пользователя в 1C
@@ -246,7 +250,11 @@ def change_user(file_path):
                 else:
                     result = response.text
                     send_msg_error(
+<<<<<<< HEAD
                         f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}")
+=======
+                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData["J2"].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
+>>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
                     return False
             else:
                 send_msg(
@@ -254,7 +262,11 @@ def change_user(file_path):
                 return True
         except requests.exceptions.RequestException as e:
             send_msg_error(
+<<<<<<< HEAD
                 f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}")
+=======
+                f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData["J2"].value}. Не выполнено. Ошибка {e}')
+>>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
             return False
 
     ad_success = False
