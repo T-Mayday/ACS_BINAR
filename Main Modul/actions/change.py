@@ -230,11 +230,10 @@ def change_user(file_path):
             return True
         except Exception as e:
             send_msg_error(
-<<<<<<< HEAD
+
                 f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
-=======
-                f'BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка при изменение пользователя в Битрикс24: {e}')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+
+
             return False
 
     # Функция для изменения пользователя в 1C
@@ -250,11 +249,8 @@ def change_user(file_path):
                 else:
                     result = response.text
                     send_msg_error(
-<<<<<<< HEAD
-                        f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}")
-=======
-                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData["J2"].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+
+                        f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}")
                     return False
             else:
                 send_msg(
@@ -262,11 +258,9 @@ def change_user(file_path):
                 return True
         except requests.exceptions.RequestException as e:
             send_msg_error(
-<<<<<<< HEAD
-                f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}")
-=======
-                f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData["J2"].value}. Не выполнено. Ошибка {e}')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+
+                f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}")
+
             return False
 
     ad_success = False
@@ -275,28 +269,29 @@ def change_user(file_path):
         long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
         full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
 
-        if simple_email:
+        if len(simple_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, simple_email, name_atrr)
             else:
-                log.info(
+                send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
-        elif long_email:
+        elif len(long_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, long_email, name_atrr)
             else:
-                log.info(
+                send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
-        elif full_email:
+        elif len(full_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, full_email, name_atrr)
             else:
-                log.info(
+                send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
         else:
+            send_msg(f'AD.Изменение: Не нашел сотрудника {employee.lastname}, {employee.firstname}, {employee.surname} ему следует создать аккаунт.')
             ad_success = False
             return ad_success
     else:
@@ -305,7 +300,7 @@ def change_user(file_path):
 
     bx_success = False
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        if simple_email:
+        if len(simple_email) > 0:
             user_dn, user_info = simple_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
@@ -314,7 +309,7 @@ def change_user(file_path):
             else:
                 send_msg(
                     f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif long_email:
+        elif len(long_email) > 0:
             user_dn, user_info = long_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
@@ -324,7 +319,7 @@ def change_user(file_path):
             else:
                 send_msg(
                     f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif full_email:
+        elif len(full_email) > 0:
             user_dn, user_info = full_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))

@@ -198,12 +198,10 @@ def blocking_user(file_path):
                     conn.modify_s(user_dn, mod_attrs)
                     log.info(
                         f"AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-                    conn.unbind()
                     return True
                 except Exception as e:
                     log.info(
                         f"AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено - ошибка {str(e)}")
-                    conn.unbind()
                     return False
 
     def block_user_bitrix(user_id):
@@ -217,11 +215,9 @@ def blocking_user(file_path):
                 f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
             return True
         except Exception as e:
-<<<<<<< HEAD
-            send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
-=======
-            send_msg_error(f'BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData["J2"].value}. {user_id} {result}. Ошибка {e}')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+
+            send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
+
             return False
 
     # Функция для создания пользователя в 1C
@@ -238,17 +234,11 @@ def blocking_user(file_path):
                     send_msg(f"1C. Блокировка (Тест) : {employee.lastname, employee.firstname, employee.surname} Выполнено")
                     return False
             else:
-<<<<<<< HEAD
-                send_msg_error(f"1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data} {response.status_code}")
+
+                send_msg_error(f"1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data} {response.status_code}")
                 return False
         except requests.exceptions.RequestException as e:
-            send_msg_error(f"1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data}")
-=======
-                send_msg_error(f'1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка: {url} {data} {response.status_code}')
-                return False
-        except requests.exceptions.RequestException as e:
-            send_msg_error(f'1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка: {url} {data}')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+            send_msg_error(f'1C. Блокировка. У сотруднка {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка: {url} {data} {response.status_code}')
             return False
 
     ad_success = True
@@ -322,7 +312,7 @@ def blocking_user(file_path):
     c1_success = True
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         # Поиск друга сотрудника одной должности
-        friendly = find_jobfriend(userData['J2'].value, userData['H2'].value)
+        friendly = find_jobfriend(userData['J2'].value, userData['G2'].value)
 
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
@@ -357,11 +347,8 @@ def blocking_user(file_path):
                         f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Выполнено")
             except Exception as e:
                 sm_success = False
-<<<<<<< HEAD
-                send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_login}. Не выполнено")
-=======
                 send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value} {sm_login}. Не выполнено')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+
         elif sm_long_login:
             try:
                 if state == '1':
@@ -373,12 +360,8 @@ def blocking_user(file_path):
                         f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_long_login}. Выполнено")
             except Exception as e:
                 sm_success = False
-                send_msg_error(
-<<<<<<< HEAD
-                    f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено")
-=======
-                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value} {sm_long_login}. Не выполнено')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+                send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено")
+
 
         elif sm_full_login:
             try:
@@ -391,12 +374,8 @@ def blocking_user(file_path):
                         f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_full_login}. Выполнено")
             except Exception as e:
                 sm_success = False
-                send_msg_error(
-<<<<<<< HEAD
-                    f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено")
-=======
-                    f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value} {sm_full_login}. Не выполнено')
->>>>>>> 9f4a72ed398a14ededefd3cb4b8b727c2316f912
+                send_msg_error(  f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено")
+
         else:
             send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Не выполнено")
 
