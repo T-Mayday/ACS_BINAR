@@ -23,12 +23,17 @@ def search_in_AD(mail, conn, base_dn):
 
             pager = attributes.get('pager',[b''])[0].decode('utf-8')
             if is_active:
-                return result,
+                return result
             else:
-                return []
+                result = []
+                return result
+        else:
+            result = []
+            return result
     except Exception as e:
         send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
-        return []
+        result = []
+        return result
 
 def search_pager(mail, conn, base_dn):
     search_filter = f"(mail={mail})"
