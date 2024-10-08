@@ -40,13 +40,25 @@ def move_file(file_path,output_dir):
 
 # Перемещаем файлы из waste обратно в input через час
 def move_back():
+
+    current_time = time.time()
+    files_to_move = []  # Список для хранения файлов, которые будут перемещены
+
     for root, dirs, files in os.walk(waste_dir):
         for file in fnmatch.filter(files, "*.xlsx"):
             file_path = os.path.join(root, file)
-            if time.time() - os.path.getmtime(file_path) > 3600:
-                log.info(f"Перемещаем файл {file} обратно в input.")
 
-                move_file(file_path, input_dir)
+            time_in_waste = current_time - os.path.getmtime(file_path)
+
+            if time_in_waste > 3600:
+                files_to_move.append(file_path)
+
+    if files_to_move:
+        send_msg(
+            f"Перенесены следующие файлы обратно в input: {', '.join([os.path.basename(f) for f in files_to_move])}")
+        for file_path in files_to_move:
+            move_file(file_path, input_dir)
+
 
 # Проверка валидации данных
 def validate_user_data(workbook):
