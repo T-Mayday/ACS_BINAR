@@ -6,7 +6,7 @@ import random
 import string
 
 # Подключение файла create.py
-# from actions.create import create_user
+from actions.create import create_user
 
 # подключение файла поиска
 from outher.search import user_verification, find_jobfriend, search_in_AD, search_email_bx
@@ -226,7 +226,7 @@ def change_user(file_path):
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
             send_msg(
-                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. {result}. Выполнено")
+                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
             return True
         except Exception as e:
             send_msg_error(
@@ -269,21 +269,21 @@ def change_user(file_path):
         long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
         full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
 
-        if len(simple_email) > 0:
+        if simple_email is not None and len(simple_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, simple_email, name_atrr)
             else:
                 send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
-        elif len(long_email) > 0:
+        elif long_email is not None and len(long_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, long_email, name_atrr)
             else:
                 send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
-        elif len(full_email) > 0:
+        elif full_email is not None and len(full_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, full_email, name_atrr)
             else:
@@ -291,8 +291,7 @@ def change_user(file_path):
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
         else:
-            send_msg(f'AD.Изменение: Не нашел сотрудника {employee.lastname}, {employee.firstname}, {employee.surname} ему следует создать аккаунт.')
-            ad_success = False
+            ad_success = create_user(file_path)
             return ad_success
     else:
         ad_success = True
@@ -300,7 +299,7 @@ def change_user(file_path):
 
     bx_success = False
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        if len(simple_email) > 0:
+        if simple_email is not None and len(simple_email) > 0:
             user_dn, user_info = simple_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
@@ -309,7 +308,7 @@ def change_user(file_path):
             else:
                 send_msg(
                     f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif len(long_email) > 0:
+        elif long_email is not None and len(long_email) > 0:
             user_dn, user_info = long_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
@@ -319,7 +318,7 @@ def change_user(file_path):
             else:
                 send_msg(
                     f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif len(full_email) > 0:
+        elif full_email is not None and len(full_email) > 0:
             user_dn, user_info = full_email[0]
             email_ad = user_info.get('mail', [None])[0]
             ID_BX24 = search_email_bx(email_ad.decode('utf-8'))
@@ -330,7 +329,7 @@ def change_user(file_path):
                 send_msg(
                     f"BX24. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
-            bx_success = False
+            bx_success = True
             return bx_success
     else:
         bx_success = True

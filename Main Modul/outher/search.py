@@ -50,7 +50,8 @@ def search_pager(mail, conn, base_dn):
                 return []
     except Exception as e:
         send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
-        return []
+        result = []
+        return result
 
 
 def user_verification(df_roles, df_users):
