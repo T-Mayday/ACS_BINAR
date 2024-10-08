@@ -226,7 +226,7 @@ def change_user(file_path):
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
             send_msg(
-                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. {result}. Выполнено")
+                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
             return True
         except Exception as e:
             send_msg_error(
@@ -269,21 +269,21 @@ def change_user(file_path):
         long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
         full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
 
-        if len(simple_email) > 0:
+        if simple_email and len(simple_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, simple_email, name_atrr)
             else:
                 send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
-        elif len(long_email) > 0:
+        elif long_email and len(long_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, long_email, name_atrr)
             else:
                 send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname}, {employee.firstname}, {employee.surname}. Выполнено"
                 )
-        elif len(full_email) > 0:
+        elif full_email and len(full_email) > 0:
             if state == '1':
                 ad_success = update_ad_attributes(conn, full_email, name_atrr)
             else:
