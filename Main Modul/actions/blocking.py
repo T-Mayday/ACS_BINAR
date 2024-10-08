@@ -247,17 +247,17 @@ def blocking_user(file_path):
         long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
         full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
 
-        if simple_email:
+        if simple_email is not None and len(simple_email) > 0:
             if state == '1':
                 ad_success = block_ad_user(conn, simple_email, block_attr)
             else:
                 send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif long_email:
+        elif long_email is not None and len(long_email) > 0:
             if state == '1':
                 ad_success = block_ad_user(conn, long_email, block_attr)
             else:
                 send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif full_email:
+        elif full_email is not None and len(full_email) > 0:
             if state == '1':
                 ad_success = block_ad_user(conn, full_email, block_attr)
             else:

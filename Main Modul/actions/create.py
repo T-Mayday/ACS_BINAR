@@ -240,7 +240,7 @@ def create_user(file_path):
                 conn.add_s(user_dn, attrs)
                 created = search_in_AD(INN, conn, base_dn)
                 save_login(phone,employee.full_name,login_type)
-                if len(created) != 0:
+                if created is not None and len(created) != 0:
                     send_msg(
                         f"AD. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
                     return True
@@ -352,25 +352,22 @@ def create_user(file_path):
         simple_email = search_in_AD(employee.create_email(employee.simple_login), conn,base_dn)
         long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
         full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
-        if len(simple_email) == 0:
+        if simple_email is None:
             try:
                 ad_success = create_in_AD(employee.simple_login)
             except Exception as e:
                 send_msg_error(
                     f"AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
-
-
-        elif len(long_email) == 0:
+        elif long_email is None:
             try:
                 ad_success = create_in_AD(employee.long_login)
             except Exception as e:
                 send_msg_error(f"AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
-        elif len(full_email) == 0:
+        elif full_email is None:
             try:
                 ad_success = create_in_AD(employee.full_login)
             except Exception as e:
                 send_msg_error(
-
                     f"AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
         else:
             send_msg_error(
