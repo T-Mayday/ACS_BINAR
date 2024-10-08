@@ -230,7 +230,7 @@ def change_user(file_path):
             return True
         except Exception as e:
             send_msg_error(
-                f'BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}')
+                f"BX24. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
             return False
 
     # Функция для изменения пользователя в 1C
@@ -241,20 +241,20 @@ def change_user(file_path):
                 response = requests.post(url, json=data, headers=headers)
                 if response.status_code == 200:
                     send_msg(
-                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
+                        f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
                     return True
                 else:
                     result = response.text
                     send_msg_error(
-                        f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}')
+                        f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}")
                     return False
             else:
                 send_msg(
-                    f'1С. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено')
+                    f"1С. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
                 return True
         except requests.exceptions.RequestException as e:
             send_msg_error(
-                f'1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}')
+                f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}")
             return False
 
     ad_success = False

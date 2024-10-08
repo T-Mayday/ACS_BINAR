@@ -31,6 +31,20 @@ def generate_random_string(length=12):
    return random_string
 
 
+
+flags = {
+        'AD': False,
+        'BX24': False,
+        'ZUP': False,
+        'RTL': False,
+        'ERP': False,
+        'SM_GEN': False,
+        'SM_LOCAL': False,
+        'Normal_account': False,
+        'Shop_account': False
+    }
+
+
 def holiday(file_path):
     global random_string, flags, state
 
@@ -52,9 +66,9 @@ def holiday(file_path):
                 date_obj = datetime.strptime(date, "%d.%m.%Y %H:%M:%S")
                 return date_obj.strftime("%d.%m.%Y")
             except ValueError:
-                raise ValueError("Неверный формат даты. Ожидаемый формат: 'dd.mm.yyyy HH:MM:SS'")
+                raise ValueError("Invalid date format. Expected format: 'dd.mm.yyyy HH:MM:SS'")
         else:
-            raise ValueError("Входные данные должны быть строкой или объектом datetime.")
+            raise ValueError("Input must be a string or a datetime object")
 
     lastname = excel_data['B2'].value
     firstname = excel_data['C2'].value
@@ -77,9 +91,9 @@ def holiday(file_path):
     }
 
 
+    bx24_success = True
     if flags['BX24'] and flags['Normal_account']:
         user_id = search_bx(lastname, firstname, surname)
-
         if not (user_id is None):
             if state == "1":
                 if state_holiday.lower() in type_holiday:
@@ -102,24 +116,22 @@ def holiday(file_path):
                         bx24.refresh_tokens() 
                         result = bx24.call('lists.element.add', date)
                         if result.get('error'):
+                            bx24_success = False
                             error_message = result.get('error_description')
                             send_msg_error(
-                                f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {error_message} {date}')
-                            return False
+                                f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {error_message} {date}')
                         if result.get('result'):
                             send_msg(
-                                f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Выполнено')
-                            return True
+                                f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено')
                     except Exception as e:
-                        send_msg_error(f'BX24.Отпуск: Сотрудник {lastname, firstname, surname} Ошибка: {str(e)} {date}')
-                        return False
+                        bx24_success = False
+                        send_msg_error(f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {str(e)} {date}')
+                    return result
             else:
                 send_msg(
-                    f'BX24.Отпуск (Тест): Сотрудник {lastname, firstname, surname}. Выполнено')
-                return True
+                    f'BX24. {state_holiday.upper()} (Тест): Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено')
         else:
             send_msg(
-                f'BX24.Отпуск: Сотрудник {lastname, firstname, surname}. Ошибка. Сотрудник не найден по ФИО.')
-            return False
-
+                f'BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Ошибка. Сотрудник не найден по ФИО.')
+    return bx24_success
 
