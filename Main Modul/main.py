@@ -132,7 +132,7 @@ def process_file(file_path):
         send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.02.10.2024'
+    ver = 'V.08.10.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
