@@ -12,7 +12,7 @@ state = connector.getState()
 
 
 # подключение файла поиска
-from outher.search import user_verification, search_bx
+from outher.search import user_verification
 
 # Подключение файла сообщения
 from message.message import send_msg, send_msg_error, log
@@ -93,7 +93,7 @@ def holiday(file_path):
 
     bx24_success = True
     if flags['BX24'] and flags['Normal_account']:
-        user_id = search_bx(lastname, firstname, surname)
+        user_id = bitrix_connector.search_user(bx24,lastname, firstname, surname)
         if not (user_id is None):
             if state == "1":
                 if state_holiday.lower() in type_holiday:

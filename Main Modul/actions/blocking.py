@@ -8,7 +8,7 @@ import time
 
 
 # подключение файла поиска
-from outher.search import user_verification, search_in_AD, find_jobfriend, search_email_bx
+from outher.search import user_verification
 
 # подключение файла сообщений
 from message.message import send_msg, send_msg_error, log
@@ -36,6 +36,9 @@ sm_conn = SMConnect()
 sm_conn.connect_SM()
 test_role_id = sm_conn.getRoleID()
 
+# Данные МД АУДИТА
+from connect.MDConnect import MDAUIDConnect
+MD_AUDIT = MDAUIDConnect()
 
 # Матрица перевода
 transliteration_dict = {
@@ -77,7 +80,6 @@ def encrypt_inn(inn):
             log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
             encrypted_inn += digit
     return encrypted_inn
-
 
 # Класс создания нужных атрибутов
 class Person:
@@ -161,9 +163,8 @@ class Person:
             random.choices(string.ascii_letters + string.digits, k=length - 3))
         return ''.join(random.sample(all_characters, len(all_characters)))
 
-
 def blocking_user(file_path):
-    global base_dn, state, cipher_dict, reverse_cipher_dict, name_domain
+    global base_dn, state, cipher_dict
 
     userData = load_workbook(file_path).active
 
@@ -185,24 +186,24 @@ def blocking_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
-    block_attr = {
-        'userAccountControl': b'514'
-    }
-
-    def block_ad_user(conn, user, new_atrr):
+    def block_ad_user(conn, user):
+        block_attr = {
+            'userAccountControl': b'514'
+        }
         user_dn, user_attrs = user[0]
-        for attr_name, attr_value in new_atrr.items():
+        for attr_name, attr_value in block_attr.items():
             if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
                 try:
                     conn.modify_s(user_dn, mod_attrs)
-                    log.info(
-                        f"AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+                    send_msg(
+                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
                     return True
                 except Exception as e:
-                    log.info(
-                        f"AD. Блокировка: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Не выполнено - ошибка {str(e)}")
+                    send_msg_error(
+                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Не выполнено - ошибка {str(e)}")
                     return False
+        return False
 
     def block_user_bitrix(user_id):
         try:
@@ -217,7 +218,6 @@ def blocking_user(file_path):
         except Exception as e:
 
             send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
-
             return False
 
     # Функция для создания пользователя в 1C
@@ -243,76 +243,66 @@ def blocking_user(file_path):
 
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
-        simple_email = search_in_AD(employee.create_email(employee.simple_login), conn, base_dn)
-        long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
-        full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
-
-        if simple_email is not None and len(simple_email) > 0:
+        existence = connector.search_in_ad(INN, conn)
+        if len(existence) > 0:
             if state == '1':
-                ad_success = block_ad_user(conn, simple_email, block_attr)
+                ad_success = block_ad_user(conn, existence)
             else:
-                send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif long_email is not None and len(long_email) > 0:
-            if state == '1':
-                ad_success = block_ad_user(conn, long_email, block_attr)
-            else:
-                send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif full_email is not None and len(full_email) > 0:
-            if state == '1':
-                ad_success = block_ad_user(conn, full_email, block_attr)
-            else:
-                send_msg(f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+                log.info(
+                    f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
-            send_msg_error(
-                f"AD. Блокировка: {employee.lastname, employee.firstname, employee.surname} {simple_email, long_email, full_email}. Пользователь не найден в AD. Не выполнено.")
+            ad_success = True
+            return ad_success
     else:
-        ad_success == True
+        ad_success = True
         return ad_success
 
+    # Блокировка МД АУДИТ
+    md_success = True
+    if flags['AD'] and flags['Normal_account']:
+        if len(existence) > 0:
+            user_dn, attributes = existence[0]
+            mail = attributes.get('mail', [b''])[0].decode('utf-8')
+            user_id = MD_AUDIT.find_user_by_email(mail)
+            if user_id:
+                if state == '1':
+                    md_success = MD_AUDIT.block_user(user_id,employee.lastname,employee.firstname,employee.surname, userData['G2'].value, userData['J2'].value)
+                else:
+                    send_msg(
+                        f"MD_AUDIT. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
+            else:
+                md_success = False
+                return md_success
+        else:
+            md_success = True
+            return md_success
+    else:
+        md_success = True
+        return md_success
 
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        simple_email = search_in_AD(employee.create_email(employee.simple_login), conn, base_dn)
-        long_email = search_in_AD(employee.create_email(employee.long_login), conn, base_dn)
-        full_email = search_in_AD(employee.create_email(employee.full_login), conn, base_dn)
-
-        if simple_email:
+        if len(existence) > 0:
+            user_dn, attributes = existence[0]
+            mail = attributes.get('mail', [b''])[0].decode('utf-8')
+            user_id = bitrix_connector.search_email(bx24, mail)
             if state == '1':
                 bx24.refresh_tokens()
-                ID_BX24 = search_email_bx(employee.create_email(employee.simple_login))
-                bx_success = block_user_bitrix(ID_BX24)
+                bx24_success = block_user_bitrix(user_id)
             else:
-                send_msg(
-                    f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif long_email:
-            if state == '1':
-                bx24.refresh_tokens()
-                ID_BX24 = search_email_bx(employee.create_email(employee.long_login))
-                bx_success = block_user_bitrix(ID_BX24)
-            else:
-                send_msg(
-                    f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-        elif full_email:
-            if state == '1':
-                bx24.refresh_tokens()
-                ID_BX24 = search_email_bx(employee.create_email(employee.full_login))
-                bx_success = block_user_bitrix(ID_BX24)
-            else:
-                send_msg(
-                    f"BX24. Блокировка (Тест): {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+                send_msg(f"BX24. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
         else:
-            bx_success = True
-            send_msg_error(
-                f'BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Пользователь не найден в AD. Не выполнено.')
+            bx24_success = True
+            send_msg_error(f'BX24. Блокировка: {employee.firstname} {employee.lastname} {employee.surname}. Пользователь не найден в AD. Не выполнено.')
     else:
         bx24_success = True
         return bx24_success
 
 
     c1_success = True
-    if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
+    if (flags['ZUP'] or flags['RTL'] or flags['ERP']) and flags['Normal_account']:
         # Поиск друга сотрудника одной должности
-        friendly = find_jobfriend(userData['J2'].value, userData['G2'].value)
+        friendly = bitrix_connector.find_jobfriend(bx24,userData['J2'].value, userData['G2'].value)
 
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
@@ -384,7 +374,7 @@ def blocking_user(file_path):
             sm_local_success = True
             return sm_local_success
     
-    if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
+    if ad_success and bx24_success and c1_success and sm_success and sm_local_success and md_success:
         return True
     else:
         return False
