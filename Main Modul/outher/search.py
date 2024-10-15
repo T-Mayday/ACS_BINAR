@@ -1,7 +1,3 @@
-
-# Подключение файла сообщения
-from message.message import send_msg_error, log
-
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
 bitrix_connector = Bitrix24Connector()
@@ -54,8 +50,8 @@ def user_verification(df_roles, df_users):
                 if position_row['USERTYPE'] == "Должность+Магазин":
                     flags['Shop_account'] = True
             else:
-                send_msg_error(f'Ошибка поискa по info.xlsx: должность {position} отдела {department} не найден.')
+                bitrix_connector.send_msg_error(f'Ошибка поискa по info.xlsx: должность {position} отдела {department} не найден.')
         else:
-            send_msg_error(f'Ошибка поискa по info.xlsx: отдел {department} не найден.')
+            bitrix_connector.send_msg_error(f'Ошибка поискa по info.xlsx: отдел {department} не найден.')
     return flags
 

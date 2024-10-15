@@ -12,7 +12,7 @@ from actions.create import create_user
 from outher.search import user_verification
 
 # подключение файла сообщений
-from message.message import send_msg, send_msg_error, log
+from message.message import log
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -31,9 +31,6 @@ from connect.ldapConnect import ActiveDirectoryConnector
 connector = ActiveDirectoryConnector()
 base_dn = connector.getBaseDn()
 state = connector.getState()
-
-# подключение к ldap
-conn = connector.connect_ad()
 
 # Матрица перевода
 transliteration_dict = {
@@ -178,6 +175,9 @@ def change_user(file_path):
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
 
+    # подключение к ldap
+    conn = connector.connect_ad()
+
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
 
@@ -210,25 +210,27 @@ def change_user(file_path):
                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
                 try:
                     conn.modify_s(user_dn, mod_attrs)
-                    send_msg(
+                    bitrix_connector.send_msg(
                         f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Обновление атрибута {attr_name}. Выполнено"
                     )
                 except Exception as e:
-                    send_msg_error(
+                    bitrix_connector.send_msg_error(
                         f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Не выполнено. Ошибка при обновлении атрибута {attr_name}: {str(e)}"
                     )
                     success = False
+                finally:
+                    connector.disconnect_ad(conn)
         return success
 
     def bitrix_call(user_id, new_data):
         try:
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
-            send_msg(
+            bitrix_connector.send_msg(
                 f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
             success = True
         except Exception as e:
-            send_msg_error(f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
+            bitrix_connector.send_msg_error(f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
             success = False
         return success
 
@@ -238,21 +240,21 @@ def change_user(file_path):
                 headers = {'Content-Type': 'application/json'}
                 response = requests.post(url, json=data, headers=headers)
                 if response.status_code == 200:
-                    send_msg(
+                    bitrix_connector.send_msg(
                         f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
                     return True
                 else:
                     result = response.text
-                    send_msg_error(
+                    bitrix_connector.send_msg_error(
 
                         f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}")
                     return False
             else:
-                send_msg(
+                bitrix_connector.send_msg(
                     f"1С. Изменение (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
                 return True
         except requests.exceptions.RequestException as e:
-            send_msg_error(
+            bitrix_connector.send_msg_error(
 
                 f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка {e}")
 
@@ -260,12 +262,13 @@ def change_user(file_path):
 
     ad_success = False
     if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN, conn)
-        if len(existence) > 0:
+        existence = connector.search_in_ad(INN)
+
+        if existence:
             if state == '1':
                 ad_success = update_ad_attributes(conn, existence, name_atrr)
             else:
-                log.info(
+                bitrix_connector.send_msg(
                     f"AD. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено"
                 )
         else:
@@ -288,7 +291,7 @@ def change_user(file_path):
                 bx_success = bitrix_call(user_id, new_data)
                 return bx_success
             else:
-                send_msg(f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
+                bitrix_connector.send_msg(f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
         else:
             user_id = bitrix_connector.search_user(bx24,employee.lastname, employee.firstname, employee.surname)
             if user_id is not None:
@@ -296,10 +299,10 @@ def change_user(file_path):
                     bx_success = bitrix_call(user_id, new_data)
                     return bx_success
                 else:
-                    send_msg(
+                    bitrix_connector.send_msg(
                         f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
             else:
-                send_msg_error(
+                bitrix_connector.send_msg_error(
                     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
                 bx_success = True
                 return bx_success

@@ -2,7 +2,12 @@ import ldap
 from ldap.filter import escape_filter_chars
 import configparser
 
-from message.message import send_msg,send_msg_error,log
+from message.message import log
+
+from connect.bitrixConnect import Bitrix24Connector
+bitrix_connector = Bitrix24Connector()
+
+
 class ActiveDirectoryConnector:
     def __init__(self):
         self.config = configparser.ConfigParser()
@@ -58,38 +63,32 @@ class ActiveDirectoryConnector:
             log.error(f"AD.Ошибка подключения. При установке соединения с LDAP: {e}")
             return None
 
-    def search_in_ad(self, INN, conn):
+    def disconnect_ad(self,conn):
+        try:
+            conn.unbind_s()
+            log.info("LDAP: Успешно отключение")
+        except ldap.LDAPError as e:
+            log.error(f"AD. Ошибка при отключении от LDAP: {e}")
+
+    def search_in_ad(self, INN):
+        conn = self.connect_ad()
+        if not conn:
+            return None
         search_filter = f"(employeeID={escape_filter_chars(INN)})"
         try:
             result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
-            if result and len(result) > 0:
-                user_dn, attributes = result[0]
-                user_account_control = attributes.get('userAccountControl', [b''])[0]
-                mail = attributes.get('mail', [b''])[0].decode('utf-8')
-                uac_value = int(user_account_control.decode())
-                is_active = not (uac_value & 0x0002)
-
-                if is_active:
-                    return result
-                else:
-                    mod_attrs = [(ldap.MOD_REPLACE, 'userAccountControl', b'512')]
-                    try:
-                        conn.modify_s(user_dn, mod_attrs)
-                        send_msg(f"AD. Активация: Учетная запись сотрудника с {mail} была успешно активирована.")
-                        return result
-                    except Exception as e:
-                        send_msg(f"AD. Ошибка при активации учетной записи сотрудника с {mail}: {e}")
-                        result = []
-                        return result
-            else:
-                result = []
-                return result
-        except Exception as e:
-            send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
-            result = []
             return result
 
-    def search_by_mail(self, mail, conn, full_name):
+        except Exception as e:
+            bitrix_connector.send_msg_error(f'LDAP Ошибка поиcка по INN: {search_filter} {str(e)} ')
+            return None
+        finally:
+            self.disconnect_ad(conn)
+
+    def search_by_mail(self, mail, full_name):
+        conn = self.connect_ad()
+        if not conn:
+            return None
         search_filter = f"(mail={escape_filter_chars(mail)})"
         try:
             result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
@@ -103,12 +102,11 @@ class ActiveDirectoryConnector:
                 if is_active and str(full_name_ad) == str(full_name):
                     return result
                 else:
-                    result = []
-                    return result
+                    return None
             else:
-                result = []
-                return result
+                return None
         except Exception as e:
-            send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
-            result = []
-            return result
+            bitrix_connector.send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
+            return None
+        finally:
+            self.disconnect_ad(conn)

@@ -9,6 +9,9 @@ from openpyxl import load_workbook
 from connect.ldapConnect import ActiveDirectoryConnector
 connector = ActiveDirectoryConnector()
 
+from connect.bitrixConnect import Bitrix24Connector
+bitrix_connector = Bitrix24Connector()
+
 # Инициализация папок
 input_dir = connector.getInput()
 output_dir = connector.getOutput()
@@ -28,7 +31,7 @@ from actions.blocking import blocking_user
 from actions.holiday import holiday
 
 # Подключение файла сообщения
-from message.message import send_msg, send_msg_adm, log
+from message.message import log
 
 
 def move_file(file_path,output_dir):
@@ -54,7 +57,7 @@ def move_back():
                 files_to_move.append(file_path)
 
     if files_to_move:
-        send_msg(
+        bitrix_connector.send_msg(
             f"Перенесены следующие файлы обратно в input: {', '.join([os.path.basename(f) for f in files_to_move])}")
         for file_path in files_to_move:
             move_file(file_path, input_dir)
@@ -110,7 +113,7 @@ def process_file(file_path):
         errors, user_data = validate_user_data(workbook)
         if errors:
             move_file(file_path,error_dir)
-            send_msg(f"Ошибки валидации: {', '.join(errors)}")
+            bitrix_connector.send_msg(f"Ошибки валидации: {', '.join(errors)}")
 
         action = user_data.get("status")
 
@@ -141,18 +144,18 @@ def process_file(file_path):
                 raise ValueError("Ошибка при назначении отпуска сотруднику")
     except Exception as e:
         move_file(file_path, waste_dir)
-        send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
+        bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.14.10.2024'
+    ver = 'V.15.10.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
     else:
         mode = 'Тестовый режим!'
 
-#    send_msg_adm(f"Старт Версии {ver} {mode}")
-    send_msg(f"Старт Версии {ver} {mode}")
+#    bitrix_connector.send_msg_adm(f"Старт Версии {ver} {mode}")
+    bitrix_connector.send_msg(f"Старт Версии {ver} {mode}")
     n = 0
     while True:
         for root, dirs, files in os.walk(input_dir):

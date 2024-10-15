@@ -4,8 +4,7 @@ from urllib.parse import urlparse, parse_qs
 from requests.auth import HTTPBasicAuth
 from pybitrix24 import Bitrix24
 
-from message.message import send_msg_error
-
+from message.message import log
 
 class Bitrix24Connector:
     def __init__(self):
@@ -33,6 +32,33 @@ class Bitrix24Connector:
         tokens = bx24.obtain_tokens(auth_code, scope='')
         return bx24, tokens
 
+    def send_msg(self, msg):
+        bx24, tokens = self.connect()
+        try:
+            log.info(msg)
+            bx24.refresh_tokens()
+            res = bx24.call('im.message.add', {'DIALOG_ID': self.chatID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
+        except Exception as e:
+            log.exception("Error sending message", e)
+
+    def send_msg_error(self, msg):
+        bx24, tokens = self.connect()
+        try:
+            log.exception(msg)
+            bx24.refresh_tokens()
+            res = bx24.call('im.message.add', {'DIALOG_ID': self.chatID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
+        except Exception as e:
+            log.exception(e)
+
+    def send_msg_adm(self, msg):
+        bx24, tokens = self.connect()
+        try:
+            log.info(msg)
+            bx24.refresh_tokens()
+            res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
+        except Exception as e:
+            log.exception("Error sending message", e)
+
     def find_jobfriend(self, bx24, post_job, codeBX24):
         filter_params = {
             'FILTER': {
@@ -46,7 +72,7 @@ class Bitrix24Connector:
                 employee_info = employees['result'][0]
                 return f"{employee_info['LAST_NAME']} {employee_info['NAME']} {employee_info['SECOND_NAME']}"
         except Exception as e:
-            send_msg_error(f"BX24: Ошибка поиска сотрудника {post_job} в департаменте {codeBX24}: {e}")
+            self.send_msg_error(f"BX24: Ошибка поиска сотрудника {post_job} в департаменте {codeBX24}: {e}")
         return None
     def search_email(self, bx24, email):
         try:
@@ -62,7 +88,7 @@ class Bitrix24Connector:
                 return result
 
         except Exception as e:
-            send_msg_error(f"BX24: Ошибка при поиске пользователя по email '{email}': {e}")
+            self.send_msg_error(f"BX24: Ошибка при поиске пользователя по email '{email}': {e}")
             return None
 
     def search_user(self, bx24, last_name, name, second_name):
@@ -73,9 +99,9 @@ class Bitrix24Connector:
                 r = result.get('result')[0]
                 return r.get('ID')
             if result.get('error'):
-                send_msg_error(
+                self.send_msg_error(
                     f"BX24. Пользователь с ФИО '{last_name} {name} {second_name}' не найден. {result.get('error')[0]}")
                 return None
         except Exception as e:
-            send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")
+            self.send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")
             return None

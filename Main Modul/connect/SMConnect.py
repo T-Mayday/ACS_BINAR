@@ -1,8 +1,10 @@
 import cx_Oracle
 import configparser
 
-from message.message import send_msg, send_msg_error, log
+from message.message import log
 
+from connect.bitrixConnect import Bitrix24Connector
+bitrix_connector = Bitrix24Connector()
 
 class SMConnect:
     def __init__(self):
@@ -21,7 +23,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, self.service_name)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM^ Ошибка подключения: {self.username}@{self.service_name} {e}")
+            bitrix_connector.send_msg_error(f"SM^ Ошибка подключения: {self.username}@{self.service_name} {e}")
             raise
 
     def connect_SM_LOCAL(self, service_name):
@@ -30,7 +32,7 @@ class SMConnect:
             self.connection = cx_Oracle.connect(self.username, self.password, dsn)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM LOCAL: Ошибка подключения: {e}")
+            bitrix_connector.send_msg_error(f"SM LOCAL: Ошибка подключения: {e}")
             raise
 
     def close(self):
@@ -45,7 +47,7 @@ class SMConnect:
             result = self.cursor.fetchall() or []
             return result
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM: Ошибка выполнения запроса: {query} {e}")
+            bitrix_connector.send_msg_error(f"SM: Ошибка выполнения запроса: {query} {e}")
             return []
 
     def execute_update(self, query):
@@ -53,7 +55,7 @@ class SMConnect:
             self.cursor.execute(query)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM: Ошибка выполнения обновления: {query} {e}")
+            bitrix_connector.send_msg_error(f"SM: Ошибка выполнения обновления: {query} {e}")
             raise
 
     def execute_procedure(self, procedure_name, params):
@@ -61,7 +63,7 @@ class SMConnect:
             self.cursor.callproc(procedure_name, params)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM: Ошибка выполнения процедуры: {query} {e}")
+            bitrix_connector.send_msg_error(f"SM: Ошибка выполнения процедуры: {query} {e}")
             raise
 
     def user_exists(self, surname):
@@ -84,10 +86,10 @@ class SMConnect:
             END;
             """
             self.execute_update(query)
-            send_msg(f"SM: Создание. Пользователь {username}. Выполено успешно.")
+            bitrix_connector.send_msg(f"SM: Создание. Пользователь {username}. Выполено успешно.")
             return True
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM: Создание. Пользователь {username}. Ошибка : {e}")
+            bitrix_connector.send_msg_error(f"SM: Создание. Пользователь {username}. Ошибка : {e}")
 #            raise
             return False
 
@@ -105,10 +107,10 @@ class SMConnect:
             END;
             """
             self.execute_update(query)
-            send_msg(f"SM Блокировка: {login} с ID {user_id}. Выполнено успешно.")
+            bitrix_connector.send_msg(f"SM Блокировка: {login} с ID {user_id}. Выполнено успешно.")
             return True
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM Блокировка: {login} с ID {user_id}. Ошибка {e}")
+            bitrix_connector.send_msg_error(f"SM Блокировка: {login} с ID {user_id}. Ошибка {e}")
 #            raise
             return False
 
@@ -126,10 +128,10 @@ class SMConnect:
             END;
             """
             self.execute_update(query)
-            send_msg(f"SM: Разблокировка. {login} с ID {user_id}. Выполнено успешно.")
+            bitrix_connector.send_msg(f"SM: Разблокировка. {login} с ID {user_id}. Выполнено успешно.")
             return True
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM: Разблокировка. {login} с ID {user_id}. Ошибка: {e}")
+            bitrix_connector.send_msg_error(f"SM: Разблокировка. {login} с ID {user_id}. Ошибка: {e}")
 #            raise
             return False
 
@@ -158,7 +160,7 @@ class SMConnect:
                 } if result else None
 
         except cx_Oracle.DatabaseError as e:
-            send_msg_error(f"SM: Ошибка получения данных по store_id={store_id}: {e}")
+            bitrix_connector.send_msg_error(f"SM: Ошибка получения данных по store_id={store_id}: {e}")
             raise
 
     def create_user_in_local_db(self, dbname, user_login, user_password, user_role):
@@ -181,7 +183,7 @@ class SMConnect:
                 log.info(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname} успешно создан")
                 return True
         except Exception as e:
-            send_msg_error(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname}. Не удалось создать, ошибка: {e}")
+            bitrix_connector.send_msg_error(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname}. Не удалось создать, ошибка: {e}")
             return False
         finally:
             if local_connection:
