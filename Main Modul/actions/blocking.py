@@ -269,7 +269,7 @@ def blocking_user(file_path):
                     bitrix_connector.send_msg(
                         f"MD_AUDIT. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
             else:
-                md_success = False
+                md_success = True
                 return md_success
         else:
             md_success = True
