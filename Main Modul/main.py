@@ -41,6 +41,9 @@ def move_file(file_path,output_dir):
         dest_name = output_dir
     shutil.move(file_path, dest_name)
 
+def move_file_waste(file_path,output_dir):
+    shutil.move(file_path, output_dir)
+
 # Перемещаем файлы из waste обратно в input через час
 def move_back():
 
@@ -143,7 +146,7 @@ def process_file(file_path):
             else:
                 raise ValueError("Ошибка при назначении отпуска сотруднику")
     except Exception as e:
-        move_file(file_path, waste_dir)
+        move_file_waste(file_path, waste_dir)
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
