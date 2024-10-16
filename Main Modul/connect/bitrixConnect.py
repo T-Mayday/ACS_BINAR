@@ -105,3 +105,15 @@ class Bitrix24Connector:
         except Exception as e:
             self.send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")
             return None
+
+    def bitrix_user_update(self, bx24, user_id, new_data):
+        try:
+            bx24.refresh_tokens()
+            result = bx24.call('user.update', {'ID': user_id, **new_data})
+            # self.send_msg(
+            #     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
+            return True
+        except Exception as e:
+            self.send_msg_error(f"BX24. Ошибка при обновлении данных {user_id} {new_data} Ошибка {e}")
+            return  False
+        

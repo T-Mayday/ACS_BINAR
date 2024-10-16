@@ -42,7 +42,8 @@ def move_file(file_path,output_dir):
     shutil.move(file_path, dest_name)
 
 def move_file_waste(file_path,output_dir):
-    shutil.move(file_path, output_dir)
+    if not os.path.exists( output_dir+os.path.basename(file_path) ):
+        shutil.move(file_path, output_dir)
 
 # Перемещаем файлы из waste обратно в input через час
 def move_back():
@@ -150,7 +151,7 @@ def process_file(file_path):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.15.10.2024'
+    ver = 'V.16.10.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'

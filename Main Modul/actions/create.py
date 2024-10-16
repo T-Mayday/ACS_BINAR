@@ -345,7 +345,7 @@ def create_user(file_path):
 
     store_names = get_storeId()
 
-    ad_success = False
+    ad_success = True
     if flags['AD'] and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
 
@@ -356,22 +356,24 @@ def create_user(file_path):
             if simple_email is None or len(simple_email) == 0:
                 try:
                     ad_success = create_in_AD(employee.simple_login)
-                    return ad_success
+#                    return ad_success
                 except Exception as e:
                     bitrix_connector.send_msg_error(
                         f"AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
             elif long_email is None or len(long_email) == 0:
                 try:
                     ad_success = create_in_AD(employee.long_login)
-                    return ad_success
+#                    return ad_success
                 except Exception as e:
+                    ad_success = False
                     bitrix_connector.send_msg_error(
                         f"AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
             elif full_email is None or len(full_email) == 0:
                 try:
                     ad_success = create_in_AD(employee.full_login)
-                    return ad_success
+#                    return ad_success
                 except Exception as e:
+                    ad_success = False
                     bitrix_connector.send_msg_error(
                         f"AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
             else:
@@ -384,57 +386,79 @@ def create_user(file_path):
             if not is_active:
                 try:
                     ad_success = activate_user_in_AD(conn, user_dn)
-                    return ad_success
                 except Exception as e:
+                    ad_success = False
                     bitrix_connector.send_msg_error(
                         f"AD. Ошибка при активации учетной записи сотрудника {employee.firstname} {employee.lastname} {employee.surname}: {e}")
             else:
                 bitrix_connector.send_msg(
                     f"AD. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Пользователь уже активен в AD.")
-                return True
+#                return True
+#                ad_success = False
             # send_msg_error(f"AD. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Поиск по employeeID выдал, что такой пользователь уже существует в AD")
     else:
         ad_success = True
         return ad_success
 
-    bx24_success = False
+    bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        if len(existence) == 0:
-            first_email = bitrix_connector.search_email(bx24,employee.create_email(employee.simple_login))
-            second_email = bitrix_connector.search_email(bx24, employee.create_email(employee.long_login))
-            three_email = bitrix_connector.search_email(bx24, employee.create_email(employee.full_login))
-
-            if len(first_email) == 0:
+        if not (existence is None) and len(existence) > 0:
+            user_dn, attributes = existence[0]
+            email = attributes.get('mail', [b''])[0].decode('utf-8')
+            
+            user_id = bitrix_connector.search_email(bx24, email)
+            # second_email = bitrix_connector.search_email(bx24, employee.create_email(employee.long_login))
+            # three_email = bitrix_connector.search_email(bx24, employee.create_email(employee.full_login))
+            if len(user_id) == 0:
                 try:
-                    bx24_success = create_in_BX24(employee.create_email(employee.simple_login))
-                    return bx24_success
+                    bx24_success = create_in_BX24(email)
+#                    return bx24_success
                 except Exception as e:
+                    bx24_success = False
                     bitrix_connector.send_msg_error(
                         f"BX24. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}")
-            elif len(second_email) == 0:
+            if len(user_id) > 0:
+                new_data = {
+                    "NAME": userData['C2'].value,
+                    "LAST_NAME": userData['B2'].value,
+                    "UF_DEPARTMENT": userData['H2'].value,
+                    "ACTIVE": "Y",
+                    "WORK_POSITION": userData['J2'].value
+                }
                 try:
-                    bx24_success = create_in_BX24(employee.create_email(employee.long_login))
-                    return bx24_success
+                    bx24_success = bitrix_connector.bitrix_user_update(bx24,user_id,new_data)
+                    bitrix_connector.send_msg(
+                        f"BX24. Создание: Обновлении данных сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Выполнено.")
                 except Exception as e:
+                    bx24_success = False
                     bitrix_connector.send_msg_error(
-                        f"BX24. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}")
-            elif len(three_email) == 0:
-                try:
-                    bx24_success = create_in_BX24(employee.create_email(employee.full_login))
-                    return bx24_success
-                except Exception as e:
-                    bitrix_connector.send_msg_error(
-                        f"BX24. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}")
+                        f"BX24. Создание: Ошибка при обновлении данных сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {user_id} {new_data} Ошибка {e}")
+#             elif len(second_email) == 0:
+#                 try:
+#                     bx24_success = create_in_BX24(employee.create_email(employee.long_login))
+# #                    return bx24_success
+#                 except Exception as e:
+#                     bx24_success = False
+#                     bitrix_connector.send_msg_error(
+#                         f"BX24. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}")
+#             elif len(three_email) == 0:
+#                 try:
+#                     bx24_success = create_in_BX24(employee.create_email(employee.full_login))
+#  #                   return bx24_success
+#                 except Exception as e:
+#                     bx24_success = False
+#                     bitrix_connector.send_msg_error(
+#                         f"BX24. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} Ошибка {e}")
             else:
                 bitrix_connector.send_msg_error(f"BX24: Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Поиск выдал что все логины заняты.")
         else:
             bitrix_connector.send_msg_error(
                 f"BX24. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Пользователь не найден в AD")
-    else:
-        bx24_success = True
-        return bx24_success
+    # else:
+    #     bx24_success = True
+#        return bx24_success
 
-    c1_success = False
+    c1_success = True
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         friendly = bitrix_connector.find_jobfriend(bx24, userData['J2'].value, userData['H2'].value)
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
@@ -449,12 +473,12 @@ def create_user(file_path):
             'job_friend': friendly
         }
         c1_success = send_in_1c(url, data)
-        return c1_success
-    else:
-        c1_success = True
-        return c1_success
+#        return c1_success
+    # else:
+    #     c1_success = True
+    #     return c1_success
 
-    sm_success = False
+    sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
         sm_login = sm_conn.user_exists(employee.sm_login) == -1
         sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
@@ -463,16 +487,16 @@ def create_user(file_path):
             try:
                 sm_success = sm_conn.create_user(sm_login, employee.password, test_role_id)
                 bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
-
             except Exception as e:
+                sm_success = False
                 bitrix_connector.send_msg_error(
                     f"СуперМаг Глобальный. Создание: Ошибка при создании первичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
         elif sm_long_login:
             try:
                 sm_success = sm_conn.create_user(sm_long_login, employee.password, test_role_id)
                 bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
-
             except Exception as e:
+                sm_success = False
                 bitrix_connector.send_msg_error(
                     f"СуперМаг Глобальный. Создание: Ошибка при создании вторичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
 
@@ -480,29 +504,28 @@ def create_user(file_path):
             try:
                 sm_success = sm_conn.create_user(sm_full_login, employee.password, test_role_id)
                 bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
-
             except Exception as e:
+                sm_success = False
                 bitrix_connector.send_msg_error(
-
                     f"СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
 
         else:
             bitrix_connector.send_msg(
                 f"СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {sm_login}, {sm_long_login}, {sm_full_login} уже существуют")
-    else:
-        sm_success = True
-        return sm_success
+    # else:
+    #     sm_success = True
+    #     return sm_success
 
-    sm_local_success = False
+    sm_local_success = True
     if flags['SM_LOCAL']:
         for dbname in store_names:
-            sm_conn.create_user_in_local_db(dbname,employee.sm_login,employee.password, test_role_id)
+            sm_local_success = sm_local_success and sm_conn.create_user_in_local_db(dbname,employee.sm_login,employee.password, test_role_id)
             bitrix_connector.send_msg(f"СуперМаг Локальный. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} на должность {userData['J2'].value} создан аккаунт в {dbname} c логином {employee.sm_login}")
-            sm_local_success = True
-            return sm_local_success
-    else:
-        sm_local_success = False
-        return sm_local_success
+            # sm_local_success = True
+            # return sm_local_success
+    # else:
+    #     sm_local_success = False
+    #     return sm_local_success
 
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
         return True
