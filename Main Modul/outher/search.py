@@ -19,8 +19,8 @@ def user_verification(df_roles, df_users):
     }
 
     for _, user_row in df_users.iterrows():
-        department = user_row['Отдел']
-        position = user_row['Должность']
+        department = str(user_row['Отдел']).strip()
+        position   = str(user_row['Должность']).strip()
 
 
         department_index = df_roles.index[df_roles['Отдел'] == department].tolist()
