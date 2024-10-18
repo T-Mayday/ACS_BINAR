@@ -32,17 +32,7 @@ def generate_random_string(length=12):
 
 
 
-flags = {
-        'AD': False,
-        'BX24': False,
-        'ZUP': False,
-        'RTL': False,
-        'ERP': False,
-        'SM_GEN': False,
-        'SM_LOCAL': False,
-        'Normal_account': False,
-        'Shop_account': False
-    }
+
 
 
 def holiday(file_path):
@@ -57,6 +47,26 @@ def holiday(file_path):
     flags = user_verification(df_roles, df_users)
 
     random_string = generate_random_string()
+    def check_existing_holiday(user_id, start_date, end_date):
+        try:
+            existing_holidays = bx24.call('lists.element.get', {
+                'IBLOCK_TYPE_ID': 'bitrix_processes',
+                'IBLOCK_ID': '52',
+                'FILTER': {
+                    'CREATED_BY': user_id
+                }
+            })
+            if 'result' in existing_holidays and existing_holidays['result']:
+                for holiday in existing_holidays['result']:
+                    holiday_start = next(iter(holiday['PROPERTY_320'].values()), None)
+                    holiday_end = next(iter(holiday['PROPERTY_322'].values()), None)
+
+                    if holiday_start == start_date and holiday_end == end_date:
+                        return True
+            return False
+        except Exception as e:
+            bitrix_connector.send_msg_error(f"Ошибка при проверке существующего отпуска: {e}")
+            return False
 
     def format_date(date):
         if isinstance(date, datetime):

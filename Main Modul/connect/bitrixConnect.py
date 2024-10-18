@@ -58,6 +58,21 @@ class Bitrix24Connector:
             res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
         except Exception as e:
             log.exception("Error sending message", e)
+    def send_msg_user(self,user_id, msg):
+        bx24, tokens = self.connect()
+        try:
+            bx24.refresh_tokens()
+            message_data = {
+                'ID': user_id,
+                'MESSAGE': msg,
+                'SYSTEM': 'N',
+                'URL_PREVIEW': 'N'
+            }
+            res = bx24.call('im.message.add', message_data)
+        except Exception as e:
+            log.exception("Error sending message", e)
+
+
 
     def find_jobfriend(self, bx24, post_job, codeBX24):
         filter_params = {
