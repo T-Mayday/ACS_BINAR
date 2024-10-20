@@ -12,7 +12,7 @@ class MDAUIDConnect:
         self.api_token = self.config['MD_AUDIT']['api_token']
 
     def find_user_by_email(self, email):
-        url = f"{self.base_url}/api/orgstruct/user"
+        url = f"{self.base_url}/orgstruct/user"
         headers = {
             "Authorization": f"Bearer {self.api_token}",
             "Content-Type": "application/json"
@@ -35,7 +35,7 @@ class MDAUIDConnect:
             return None
 
     def block_user(self, user_id, lastname, firstname, surname, department, postjob):
-        url = f"{self.base_url}/api/orgstruct/user/{user_id}"
+        url = f"{self.base_url}/orgstruct/user/{user_id}"
         headers = {
             "Authorization": f"Bearer {self.api_token}",
             "Content-Type": "application/json"

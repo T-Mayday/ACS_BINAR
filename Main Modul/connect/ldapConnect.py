@@ -54,7 +54,6 @@ class ActiveDirectoryConnector:
     def connect_ad(self):
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         ldap.set_option(ldap.OPT_REFERRALS, 0)
-
         try:
             conn = ldap.initialize(f'ldaps://{self.ip}:636')
             conn.simple_bind_s(f'{self.domain_name}\\{self.username}', self.password)
@@ -66,7 +65,6 @@ class ActiveDirectoryConnector:
     def disconnect_ad(self,conn):
         try:
             conn.unbind_s()
-            log.info("LDAP: Успешно отключение")
         except ldap.LDAPError as e:
             log.error(f"AD. Ошибка при отключении от LDAP: {e}")
 
@@ -85,28 +83,32 @@ class ActiveDirectoryConnector:
         finally:
             self.disconnect_ad(conn)
 
-    def search_by_mail(self, mail, full_name):
+    def search_by_mail(self, mail):
         conn = self.connect_ad()
         if not conn:
             return None
         search_filter = f"(mail={escape_filter_chars(mail)})"
         try:
             result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
-            if result and len(result) > 0:
-                user_dn, attributes = result[0]
-                user_account_control = attributes.get('userAccountControl', [b''])[0]
-                uac_value = int(user_account_control.decode())
-                is_active = not (uac_value & 0x0002)
-
-                full_name_ad = attributes.get('displayName', [b''])[0].decode('utf-8')
-                if is_active and str(full_name_ad) == str(full_name):
-                    return result
-                else:
-                    return None
-            else:
-                return None
+            return result
         except Exception as e:
             bitrix_connector.send_msg_error(f'LDAP Ошибка поиcка по mail: {search_filter} {str(e)} ')
             return None
         finally:
             self.disconnect_ad(conn)
+
+    def search_by_fullname(self, full_name):
+        conn = self.connect_ad()
+        if not conn:
+            return []
+        search_filter = f"(displayName={escape_filter_chars(full_name)})"
+        try:
+            result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
+            return result
+        except Exception as e:
+            bitrix_connector.send_msg_error(f'LDAP Ошибка поиcка по ФИО: {search_filter} {str(e)} ')
+            return None
+        finally:
+            self.disconnect_ad(conn)
+
+

@@ -58,12 +58,13 @@ class Bitrix24Connector:
             res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
         except Exception as e:
             log.exception("Error sending message", e)
-    def send_msg_user(self,user_id, msg):
+    def send_msg_user(self, user_id, msg):
         bx24, tokens = self.connect()
         try:
+
             bx24.refresh_tokens()
             message_data = {
-                'ID': user_id,
+                'DIALOG_ID': user_id,
                 'MESSAGE': msg,
                 'SYSTEM': 'N',
                 'URL_PREVIEW': 'N'
@@ -71,8 +72,6 @@ class Bitrix24Connector:
             res = bx24.call('im.message.add', message_data)
         except Exception as e:
             log.exception("Error sending message", e)
-
-
 
     def find_jobfriend(self, bx24, post_job, codeBX24):
         filter_params = {
@@ -89,6 +88,7 @@ class Bitrix24Connector:
         except Exception as e:
             self.send_msg_error(f"BX24: Ошибка поиска сотрудника {post_job} в департаменте {codeBX24}: {e}")
         return None
+
     def search_email(self, bx24, email):
         try:
             bx24.refresh_tokens()

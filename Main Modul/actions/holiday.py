@@ -31,42 +31,38 @@ def generate_random_string(length=12):
    return random_string
 
 
+def check_existing_holiday(user_id, start_date, end_date):
+    try:
+        existing_holidays = bx24.call('lists.element.get', {
+            'IBLOCK_TYPE_ID': 'bitrix_processes',
+            'IBLOCK_ID': '25',
+            'FILTER': {
+                'CREATED_BY': user_id
+            }
+        })
 
+        if 'result' in existing_holidays and existing_holidays['result']:
+            for holiday in existing_holidays['result']:
+                holiday_start = next(iter(holiday['PROPERTY_101'].values()), None)
+                holiday_end = next(iter(holiday['PROPERTY_103'].values()), None)
 
+                if holiday_start == start_date and holiday_end == end_date:
+                    return True
+        return False
+    except Exception as e:
+        bitrix_connector.send_msg_error(f"Ошибка при проверке существующего отпуска: {e}")
+        return False
 
 
 def holiday(file_path):
-    global random_string, flags, state
+    global random_string, state
 
     excel_data = load_workbook(file_path).active
-
     df_users = pd.read_excel(file_path)
     df_roles = pd.read_excel('info.xlsx')
-
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
-
     random_string = generate_random_string()
-    def check_existing_holiday(user_id, start_date, end_date):
-        try:
-            existing_holidays = bx24.call('lists.element.get', {
-                'IBLOCK_TYPE_ID': 'bitrix_processes',
-                'IBLOCK_ID': '52',
-                'FILTER': {
-                    'CREATED_BY': user_id
-                }
-            })
-            if 'result' in existing_holidays and existing_holidays['result']:
-                for holiday in existing_holidays['result']:
-                    holiday_start = next(iter(holiday['PROPERTY_320'].values()), None)
-                    holiday_end = next(iter(holiday['PROPERTY_322'].values()), None)
-
-                    if holiday_start == start_date and holiday_end == end_date:
-                        return True
-            return False
-        except Exception as e:
-            bitrix_connector.send_msg_error(f"Ошибка при проверке существующего отпуска: {e}")
-            return False
 
     def format_date(date):
         if isinstance(date, datetime):
@@ -89,7 +85,6 @@ def holiday(file_path):
     state_holiday = excel_data['P2'].value
     if state_holiday is None:
         state_holiday = excel_data['M2'].value
-
     # Виды отпуска
     type_holiday = {
         'отпуск ежегодный': '332',
@@ -99,6 +94,15 @@ def holiday(file_path):
         'за свой счет': '340',
         'другое': '342'
     }
+    # Виды сообщений
+    message_templates = {
+        'отпуск ежегодный': f'Здравствуйте, Ваш ежегодный отпуск зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
+        'командировка': f'Здравствуйте, Ваша командировка зарегистрирована в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
+        'больничный': f'Здравствуйте, Ваш больничный зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
+        'декретный': f'Здравствуйте, Ваш декретный отпуск зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
+        'за свой счет': f'Здравствуйте, Ваш отпуск за свой счет зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
+        'другое': f'Здравствуйте, Ваше отсутствие зарегистрировано в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.'
+    }
 
 
     bx24_success = True
@@ -107,36 +111,40 @@ def holiday(file_path):
         if not (user_id is None):
             if state == "1":
                 if state_holiday.lower() in type_holiday:
-                    result = type_holiday[state_holiday.lower()]
-                    date = {
-                        'IBLOCK_TYPE_ID': 'bitrix_processes',
-                        'IBLOCK_ID': '52',
-                        'ELEMENT_CODE': random_string,
-                        'FIELDS': {
-                            'NAME': 'ОТПУСК',
-                            'CREATED_BY': f'{user_id}',
-                            'PROPERTY_320': f'{start_holiday}',
-                            'PROPERTY_322': f'{end_holiday}',
-                            'PROPERTY_324': [
-                                f'{result}'
-                            ]
+                    existence_date = check_existing_holiday(user_id,start_holiday,end_holiday)
+                    if not existence_date:
+                        result = type_holiday[state_holiday.lower()]
+                        date = {
+                            'IBLOCK_TYPE_ID': 'bitrix_processes',
+                            'IBLOCK_ID': '52',
+                            'ELEMENT_CODE': random_string,
+                            'FIELDS': {
+                                'NAME': 'ОТПУСК',
+                                'CREATED_BY': f'{user_id}',
+                                'PROPERTY_320': f'{start_holiday}',
+                                'PROPERTY_322': f'{end_holiday}',
+                                'PROPERTY_324': [
+                                    f'{result}'
+                                ]
+                            }
                         }
-                    }
-                    try:
-                        bx24.refresh_tokens() 
-                        result = bx24.call('lists.element.add', date)
-                        if result.get('error'):
+                        try:
+                            bx24.refresh_tokens()
+                            result = bx24.call('lists.element.add', date)
+                            if result.get('error'):
+                                error_message = result.get('error_description')
+                                bitrix_connector.send_msg_error(
+                                    f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {error_message} {date}")
+                                bx24_success = False
+                            if result.get('result'):
+                                msg = message_templates.get(state_holiday.lower(), 'Ваш отпуск зарегистрирован.')
+                                bitrix_connector.send_msg_user(user_id, msg)
+                                bitrix_connector.send_msg(
+                                    f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")
+                                bx24_success = True
+                        except Exception as e:
                             bx24_success = False
-                            error_message = result.get('error_description')
-                            bitrix_connector.send_msg_error(
-                                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {error_message} {date}")
-                        if result.get('result'):
-                            bitrix_connector.send_msg(
-                                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")
-                    except Exception as e:
-                        bx24_success = False
-                        bitrix_connector.send_msg_error(f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {str(e)} {date}")
-                    return result
+                            bitrix_connector.send_msg_error(f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {str(e)} {date}")
             else:
                 bitrix_connector.send_msg(
                     f"BX24. {state_holiday.upper()} (Тест): Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")

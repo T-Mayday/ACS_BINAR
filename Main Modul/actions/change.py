@@ -18,7 +18,7 @@ from message.message import log
 from connect.bitrixConnect import Bitrix24Connector
 
 bitrix_connector = Bitrix24Connector()
-bx24, tokens = bitrix_connector.connect()
+
 
 # подключение connect1c
 from connect.connect1C import Connector1C
@@ -63,9 +63,6 @@ cipher_dict = {
     "9": "!"
 }
 reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
-
-# Подключение файла create.py
-# from actions.create import create_user
 
 
 # Функция для шифрование ИНН
@@ -164,45 +161,8 @@ class Person:
         return ''.join(random.sample(all_characters, len(all_characters)))
 
 
-def change_user(file_path):
-    global base_dn, state
-
-    userData = load_workbook(file_path).active
-
-    df_users = pd.read_excel(file_path)
-    df_roles = pd.read_excel('info.xlsx')
-
-    # Создание объекта сотрудника
-    employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
-
-    # подключение к ldap
-    conn = connector.connect_ad()
-
-    # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
-
-    # Зашифровка ИНН
-    INN = encrypt_inn(userData['A2'].value)
-
-    # Новые данные
-    name_atrr = {
-        'sn': userData["B2"].value.encode('utf-8'),
-        'givenName': userData["C2"].value.encode('utf-8'),
-        'department': userData["G2"].value.encode('utf-8'),
-        'division': userData["I2"].value.encode('utf-8'),
-        'company': userData["F2"].value.encode('utf-8'),
-        'title': userData["J2"].value.encode('utf-8'),
-    }
-
-    new_data = {
-        "NAME": userData['C2'].value,
-        "LAST_NAME": userData['B2'].value,
-        "UF_DEPARTMENT": userData['H2'].value,
-        "ACTIVE": "Y",
-        "WORK_POSITION": userData['J2'].value
-    }
-
-    def update_ad_attributes(conn, user, new_atrr):
+# Обновление в AD
+def update_ad_attributes(conn, user, new_atrr, employee):
         user_dn, user_attrs = user[0]
         success = True
         for attr_name, attr_value in new_atrr.items():
@@ -222,7 +182,8 @@ def change_user(file_path):
                     connector.disconnect_ad(conn)
         return success
 
-    def bitrix_call(user_id, new_data):
+# Обновление в BX24
+def bitrix_call(bx24, user_id, new_data, employee, userData):
         try:
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
@@ -234,7 +195,8 @@ def change_user(file_path):
             success = False
         return success
 
-    def send_in_1c(url, data):
+# Отправка в 1с
+def send_in_1c(url, data, employee, userData):
         try:
             if state == '1':
                 headers = {'Content-Type': 'application/json'}
@@ -260,55 +222,46 @@ def change_user(file_path):
 
             return False
 
-    ad_success = False
-    if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+def change_user(file_path):
+    global base_dn, state
 
-        if existence:
-            if state == '1':
-                ad_success = update_ad_attributes(conn, existence, name_atrr)
-            else:
-                bitrix_connector.send_msg(
-                    f"AD. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено"
-                )
-        else:
-            ad_success = create_user(file_path)
-            return ad_success
-    else:
-        ad_success = True
-        return ad_success
+    userData = load_workbook(file_path).active
 
+    df_users = pd.read_excel(file_path)
+    df_roles = pd.read_excel('info.xlsx')
 
-    bx_success = False
-    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        if len(existence) > 0:
-            user_dn, attributes = existence[0]
-            mail = attributes.get('mail', [b''])[0].decode('utf-8')
+    # Создание объекта сотрудника
+    employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
 
-            user_id = bitrix_connector.search_email(bx24, mail)
+    # Подключение к ldap
+    conn = connector.connect_ad()
 
-            if state == '1':
-                bx_success = bitrix_call(user_id, new_data)
-                return bx_success
-            else:
-                bitrix_connector.send_msg(f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
-        else:
-            user_id = bitrix_connector.search_user(bx24,employee.lastname, employee.firstname, employee.surname)
-            if user_id is not None:
-                if state == '1':
-                    bx_success = bitrix_call(user_id, new_data)
-                    return bx_success
-                else:
-                    bitrix_connector.send_msg(
-                        f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
-            else:
-                bitrix_connector.send_msg_error(
-                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
-                bx_success = True
-                return bx_success
-    else:
-        bx_success = True
-        return bx_success
+    # Подключение к битрикс
+    bx24, tokens = bitrix_connector.connect()
+
+    # поиск по info.xlsx
+    flags = user_verification(df_roles, df_users)
+
+    # Зашифровка ИНН
+    INN = encrypt_inn(userData['A2'].value)
+
+    # Новые данные
+    name_atrr = {
+        'sn': userData["B2"].value.encode('utf-8'),
+        'givenName': userData["C2"].value.encode('utf-8'),
+        'department': userData["G2"].value.encode('utf-8'),
+        'division': userData["I2"].value.encode('utf-8'),
+        'company': userData["F2"].value.encode('utf-8'),
+        'title': userData["J2"].value.encode('utf-8'),
+    }
+
+    new_data = {
+        "NAME": userData['C2'].value,
+        "LAST_NAME": userData['B2'].value,
+        "UF_DEPARTMENT": userData['H2'].value,
+        "ACTIVE": "Y",
+        "WORK_POSITION": userData['J2'].value
+    }
 
     def update_1c():
         if (flags['ZUP'] or flags['RTL'] or flags['ERP']) and flags['Normal_account']:
@@ -326,9 +279,60 @@ def change_user(file_path):
                 'ZUP': ZUP_value,
                 'job_friend': friendly
             }
-            return send_in_1c(url, data)
+            return send_in_1c(url, data, employee, userData)
         else:
             return True
+
+    bx_success = False
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+        existence = connector.search_in_ad(INN)
+
+        if len(existence) > 0:
+            user_dn, attributes = existence[0]
+            mail = attributes.get('mail', [b''])[0].decode('utf-8')
+
+            user_id = bitrix_connector.search_email(bx24, mail)
+
+            if state == '1':
+                bx_success = bitrix_call(bx24, user_id, new_data, employee, userData)
+                return bx_success
+            else:
+                bitrix_connector.send_msg(
+                    f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
+        else:
+            user_id = bitrix_connector.search_user(bx24, employee.lastname, employee.firstname, employee.surname)
+            if user_id is not None:
+                if state == '1':
+                    bx_success = bitrix_call(bx24, user_id, new_data, employee, userData)
+                    return bx_success
+                else:
+                    bitrix_connector.send_msg(
+                        f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
+            else:
+                bitrix_connector.send_msg_error(
+                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
+                bx_success = True
+                return bx_success
+    else:
+        bx_success = True
+        return bx_success
+
+    ad_success = False
+    if flags['AD'] and flags['Normal_account']:
+
+        if existence:
+            if state == '1':
+                ad_success = update_ad_attributes(conn, existence, name_atrr, employee)
+            else:
+                bitrix_connector.send_msg(
+                    f"AD. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено"
+                )
+        else:
+            ad_success = create_user(file_path)
+            return ad_success
+    else:
+        ad_success = True
+        return ad_success
 
     if ad_success and bx_success and update_1c():
         return True

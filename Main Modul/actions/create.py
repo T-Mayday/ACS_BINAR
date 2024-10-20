@@ -158,31 +158,22 @@ class Person:
         all_characters = lower + upper + digit + ''.join(random.choices(string.ascii_letters + string.digits, k=length - 3))
         return ''.join(random.sample(all_characters, len(all_characters)))
 
+def activate_user_in_AD(conn, user_dn, employee, userData):
+    try:
+        mod_attrs = [(ldap.MOD_REPLACE, 'userAccountControl', b'512')]
+        conn.modify_s(user_dn, mod_attrs)
+        bitrix_connector.send_msg(
+            f"AD. Активация: Учетная запись сотрудника {employee.firstname} {employee.lastname} {employee.surname} была успешно активирована.")
+        return True
+    except Exception as e:
+        bitrix_connector.send_msg_error(
+            f"AD. Ошибка при активации учетной записи {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2']}: {e}")
+        return False
+    finally:
+        connector.disconnect_ad(conn)
 
-
-def create_user(file_path):
-    global base_dn, state, cipher_dict, name_domain, base_dn
-
-    # подключение к ldap
-    conn = connector.connect_ad()
-
-    userData = load_workbook(file_path).active
-
-    df_users = pd.read_excel(file_path)
-    df_roles = pd.read_excel('info.xlsx')
-
-    # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
-
-    # Создание объекта сотрудника
-    employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
-    phone = userData['K2'].value if not (userData['K2'].value is None) else ''
-
-    # Зашифровка ИНН
-    INN = encrypt_inn(userData['A2'].value)
-
-    # Функция записи логина и пароля
-    def save_login(phone_number, full_name , login):
+# Функция записи логина и пароля
+def save_login(phone_number, full_name, login):
         bitrix_connector.send_msg_adm(f"{phone_number} {full_name} {login}")
         file_path = 'logins.xlsx'
         try:
@@ -196,69 +187,56 @@ def create_user(file_path):
         workbook.save(file_path)
         workbook.close()
 
-    def activate_user_in_AD(conn, user_dn):
-        try:
-            mod_attrs = [(ldap.MOD_REPLACE, 'userAccountControl', b'512')]
-            conn.modify_s(user_dn, mod_attrs)
-            bitrix_connector.send_msg(
-                f"AD. Активация: Учетная запись сотрудника {employee.firstname} {employee.lastname} {employee.surname} была успешно активирована.")
-            return True
-        except Exception as e:
-            bitrix_connector.send_msg_error(
-                f"AD. Ошибка при активации учетной записи {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2']}: {e}")
-            return False
-        finally:
-            connector.disconnect_ad(conn)
 
-
-    # Функция для создания пользователя в AD
-    def create_in_AD(login_type):
-        try:
-            dn = connector.getNewUserDn().format(login_type)
-            user_dn = f"CN={login_type},{dn}"
-            attrs = [
-                ('objectClass', [b'top', b'person', b'organizationalPerson', b'user']),
-                ('cn', [login_type.encode('utf-8')]),
-                ('givenName', [employee.firstname.encode('utf-8')]),
-                ('sAMAccountName', [login_type.encode('utf-8')]),
-                ('userPrincipalName', [login_type.encode('utf-8') + b'@BINLTD.local']),
-#                ('displayName', [login_type.encode('utf-8')]),
-                ('displayName', [str(f"{employee.lastname} {employee.firstname} {employee.surname}").encode('utf-8')]),
-                ('department', [userData['G2'].value.encode('utf-8')]),
-                ('mail', [employee.create_email(login_type).encode('utf-8')]),
-                ('sn', [employee.lastname.encode('utf-8')]),
-                ('employeeID', [str(INN).encode('utf-8')]),
-                ('company', [userData['F2'].value.encode('utf-8')]),
-                ('userAccountControl', [b'512']),
-                ('middleName', [employee.surname.encode('utf-8')]),
-                ('title', [userData['J2'].value.encode('utf-8')]),
-                ('pwdLastSet', [b'0']),
-            ]
-            if state == "1":
-#                ldif = modlist.addModlist(attrs)
-                conn.add_s(user_dn, attrs)
-                created = connector.search_in_ad(INN)
-                save_login(phone,employee.full_name,login_type)
-                if created is not None and len(created) != 0:
-                    bitrix_connector.send_msg(
-                        f"AD. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
-                    return True
-                else:
-                    bitrix_connector.send_msg_error(
-                        f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_dn}. Не выполнено")
-                    return False
-            else:
+# Функция для создания пользователя в AD
+def create_in_AD(login_type, conn, employee, userData , INN, phone):
+    try:
+        dn = connector.getNewUserDn().format(login_type)
+        user_dn = f"CN={login_type},{dn}"
+        attrs = [
+            ('objectClass', [b'top', b'person', b'organizationalPerson', b'user']),
+            ('cn', [login_type.encode('utf-8')]),
+            ('givenName', [employee.firstname.encode('utf-8')]),
+            ('sAMAccountName', [login_type.encode('utf-8')]),
+            ('userPrincipalName', [login_type.encode('utf-8') + b'@BINLTD.local']),
+            #                ('displayName', [login_type.encode('utf-8')]),
+            ('displayName', [str(f"{employee.lastname} {employee.firstname} {employee.surname}").encode('utf-8')]),
+            ('department', [userData['G2'].value.encode('utf-8')]),
+            ('mail', [employee.create_email(login_type).encode('utf-8')]),
+            ('sn', [employee.lastname.encode('utf-8')]),
+            ('employeeID', [str(INN).encode('utf-8')]),
+            ('company', [userData['F2'].value.encode('utf-8')]),
+            ('userAccountControl', [b'512']),
+            ('middleName', [employee.surname.encode('utf-8')]),
+            ('title', [userData['J2'].value.encode('utf-8')]),
+            ('pwdLastSet', [b'0']),
+        ]
+        if state == "1":
+            #ldif = modlist.addModlist(attrs)
+            conn.add_s(user_dn, attrs)
+            created = connector.search_in_ad(INN)
+            save_login(phone, employee.full_name, login_type)
+            if created is not None and len(created) != 0:
                 bitrix_connector.send_msg(
-                    f"AD. Создание (Tест): Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
+                    f"AD. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
                 return True
-        except Exception as e:
-            bitrix_connector.send_msg_error(f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при создании {str(user_dn)} {str(attrs)} {str(e)}")
-            return False
-        finally:
-            connector.disconnect_ad(conn)
+            else:
+                bitrix_connector.send_msg_error(
+                    f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_dn}. Не выполнено")
+                return False
+        else:
+            bitrix_connector.send_msg(
+                f"AD. Создание (Tест): Сотруднику {employee.firstname, employee.lastname, employee.surname} {user_dn}. Выполнено")
+            return True
+    except Exception as e:
+        bitrix_connector.send_msg_error(
+            f"AD. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при создании {str(user_dn)} {str(attrs)} {str(e)}")
+        return False
+    finally:
+        connector.disconnect_ad(conn)
 
-    # Функция для создания пользователя в BX24
-    def create_in_BX24(email):
+# Функция для создания пользователя в BX24
+def create_in_BX24(email, bx24, employee, userData, conn):
         try:
             user_data = {
                 "NAME": employee.firstname,
@@ -304,7 +282,9 @@ def create_user(file_path):
         except Exception as e:
             bitrix_connector.send_msg_error(f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Ошибка:{e}")
             return False
-    def send_in_1c(url, data):
+
+# Отправка в 1c
+def send_in_1c(url, data, employee, userData):
         try:
             if state == '1':
                 headers = {'Content-Type': 'application/json'}
@@ -317,7 +297,6 @@ def create_user(file_path):
                 else:
                     result = response.text
                     bitrix_connector.send_msg_error(f'1С. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Не выполнено. Ошибки - {response.status_code} {url} {data}')
-
                     return False
             else:
                 bitrix_connector.send_msg(
@@ -326,6 +305,29 @@ def create_user(file_path):
         except requests.exceptions.RequestException as e:
             bitrix_connector.send_msg_error(f"1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка {url} {data} Error: {e}")
             return False
+
+# Главная функция
+def create_user(file_path):
+    global base_dn, state, cipher_dict, name_domain, base_dn
+
+    # подключение к ldap
+    conn = connector.connect_ad()
+
+    userData = load_workbook(file_path).active
+
+    df_users = pd.read_excel(file_path)
+    df_roles = pd.read_excel('info.xlsx')
+
+    # поиск по info.xlsx
+    flags = user_verification(df_roles, df_users)
+
+    # Создание объекта сотрудника
+    employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
+    phone = userData['K2'].value if not (userData['K2'].value is None) else ''
+
+    # Зашифровка ИНН
+    INN = encrypt_inn(userData['A2'].value)
+
     # Получение название локальной базы
     def get_storeId():
         stores_id = userData['N2'].value
@@ -350,34 +352,35 @@ def create_user(file_path):
         existence = connector.search_in_ad(INN)
 
         if existence is None or len(existence) == 0:
-            simple_email = connector.search_by_mail(employee.create_email(employee.simple_login), employee.full_name)
-            long_email = connector.search_by_mail(employee.create_email(employee.long_login), employee.full_name)
-            full_email = connector.search_by_mail(employee.create_email(employee.full_login), employee.full_name)
-            if simple_email is None or len(simple_email) == 0:
-                try:
-                    ad_success = create_in_AD(employee.simple_login)
-#                    return ad_success
-                except Exception as e:
-                    bitrix_connector.send_msg_error(
-                        f"AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
-            elif long_email is None or len(long_email) == 0:
-                try:
-                    ad_success = create_in_AD(employee.long_login)
-#                    return ad_success
-                except Exception as e:
-                    ad_success = False
-                    bitrix_connector.send_msg_error(
-                        f"AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
-            elif full_email is None or len(full_email) == 0:
-                try:
-                    ad_success = create_in_AD(employee.full_login)
-#                    return ad_success
-                except Exception as e:
-                    ad_success = False
-                    bitrix_connector.send_msg_error(
-                        f"AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
+            personal = connector.search_by_fullname(employee.full_name)
+            if personal is None or len(personal) == 0:
+                ad_success = create_in_AD(employee.simple_login, conn, employee, userData, INN, phone)
             else:
-                bitrix_connector.send_msg_error(f"AD.Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Поиск по mail + ФИО выдал, что такой пользователь уже существует в AD")
+                simple_email = connector.search_by_mail(employee.create_email(employee.simple_login))
+                long_email = connector.search_by_mail(employee.create_email(employee.long_login))
+                full_email = connector.search_by_mail(employee.create_email(employee.full_login))
+                if simple_email is None or len(simple_email) == 0:
+                    try:
+                        ad_success = create_in_AD(employee.simple_login, conn, employee, userData, INN, phone)
+                    except Exception as e:
+                        bitrix_connector.send_msg_error(
+                            f"AD. Создание: Ошибка при создании первичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
+                elif long_email is None or len(long_email) == 0:
+                    try:
+                        ad_success = create_in_AD(employee.long_login, conn, employee, userData, INN, phone)
+                    except Exception as e:
+                        ad_success = False
+                        bitrix_connector.send_msg_error(
+                            f"AD. Создание: Ошибка при создании вторичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
+                elif full_email is None or len(full_email) == 0:
+                    try:
+                        ad_success = create_in_AD(employee.full_login, conn, employee, userData, INN, phone)
+                    except Exception as e:
+                        ad_success = False
+                        bitrix_connector.send_msg_error(
+                            f"AD. Создание: Ошибка при создании третичного логина у сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}.Ошибка {e}")
+                else:
+                    bitrix_connector.send_msg_error(f"AD.Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Поиск по mail выдал, что такой пользователь уже существует в AD")
         else:
             user_dn, attributes = existence[0]
             user_account_control = attributes.get('userAccountControl', [b''])[0]
@@ -385,7 +388,7 @@ def create_user(file_path):
             is_active = not (uac_value & 0x0002)
             if not is_active:
                 try:
-                    ad_success = activate_user_in_AD(conn, user_dn)
+                    ad_success = activate_user_in_AD(conn, user_dn, employee, userData)
                 except Exception as e:
                     ad_success = False
                     bitrix_connector.send_msg_error(
@@ -393,12 +396,10 @@ def create_user(file_path):
             else:
                 bitrix_connector.send_msg(
                     f"AD. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Пользователь уже активен в AD {user_dn}.")
-#                return True
-#                ad_success = False
-            # send_msg_error(f"AD. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Поиск по employeeID выдал, что такой пользователь уже существует в AD")
     else:
         ad_success = True
         return ad_success
+
 
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
@@ -411,8 +412,7 @@ def create_user(file_path):
             # three_email = bitrix_connector.search_email(bx24, employee.create_email(employee.full_login))
             if len(user_id) == 0:
                 try:
-                    bx24_success = create_in_BX24(email)
-#                    return bx24_success
+                    bx24_success = create_in_BX24(email, bx24, employee, userData, conn)
                 except Exception as e:
                     bx24_success = False
                     bitrix_connector.send_msg_error(
@@ -426,7 +426,7 @@ def create_user(file_path):
                     "WORK_POSITION": userData['J2'].value
                 }
                 try:
-                    bx24_success = bitrix_connector.bitrix_user_update(bx24,user_id,new_data)
+                    bx24_success = bitrix_connector.bitrix_user_update(bx24, user_id, new_data)
                     bitrix_connector.send_msg(
                         f"BX24. Создание: Обновлении данных сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Выполнено.")
                 except Exception as e:
@@ -454,9 +454,6 @@ def create_user(file_path):
         else:
             bitrix_connector.send_msg_error(
                 f"BX24. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Пользователь не найден в AD")
-    # else:
-    #     bx24_success = True
-#        return bx24_success
 
     c1_success = True
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
@@ -472,11 +469,7 @@ def create_user(file_path):
             'ZUP': ZUP_value,
             'job_friend': friendly
         }
-        c1_success = send_in_1c(url, data)
-#        return c1_success
-    # else:
-    #     c1_success = True
-    #     return c1_success
+        c1_success = send_in_1c(url, data, employee, userData)
 
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
@@ -512,20 +505,14 @@ def create_user(file_path):
         else:
             bitrix_connector.send_msg(
                 f"СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {sm_login}, {sm_long_login}, {sm_full_login} уже существуют")
-    # else:
-    #     sm_success = True
-    #     return sm_success
+
 
     sm_local_success = True
     if flags['SM_LOCAL']:
         for dbname in store_names:
             sm_local_success = sm_local_success and sm_conn.create_user_in_local_db(dbname,employee.sm_login,employee.password, test_role_id)
             bitrix_connector.send_msg(f"СуперМаг Локальный. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} на должность {userData['J2'].value} создан аккаунт в {dbname} c логином {employee.sm_login}")
-            # sm_local_success = True
-            # return sm_local_success
-    # else:
-    #     sm_local_success = False
-    #     return sm_local_success
+
 
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
         return True
