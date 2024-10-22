@@ -117,6 +117,7 @@ class Bitrix24Connector:
                 if user_active == 'Y':
                     return user_id
                 else:
+
                     return None
             if result.get('error'):
                 self.send_msg_error(
