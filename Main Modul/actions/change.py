@@ -266,6 +266,7 @@ def change_user(file_path):
         "UF_DEPARTMENT": str(userData['H2'].value),
         "ACTIVE": "Y",
         "WORK_POSITION": str(userData['J2'].value)
+
     }
 
     def update_1c():
