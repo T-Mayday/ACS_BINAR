@@ -187,9 +187,14 @@ def bitrix_call(bx24, user_id, new_data, employee, userData):
         try:
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
-            bitrix_connector.send_msg(
-                f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
-            success = True
+            if result.get('error'):
+                bitrix_connector.send_msg_error(
+                    f"BX24. Ошибка при изменении пользователя: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {result.get('error_description')}")
+                success = False
+            else:
+                bitrix_connector.send_msg(
+                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
+                success = True
         except Exception as e:
             bitrix_connector.send_msg_error(f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
             success = False
@@ -256,11 +261,11 @@ def change_user(file_path):
     }
 
     new_data = {
-        "NAME": userData['C2'].value,
-        "LAST_NAME": userData['B2'].value,
-        "UF_DEPARTMENT": userData['H2'].value,
+        "NAME": str(userData['C2'].value),
+        "LAST_NAME": str(userData['B2'].value),
+        "UF_DEPARTMENT": str(userData['H2'].value),
         "ACTIVE": "Y",
-        "WORK_POSITION": userData['J2'].value
+        "WORK_POSITION": str(userData['J2'].value)
     }
 
     def update_1c():
