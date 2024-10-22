@@ -478,37 +478,37 @@ def create_user(file_path):
         sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
         if sm_login:
             try:
-                sm_success = sm_conn.create_user(sm_login, employee.password, test_role_id)
-                bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+                sm_success = sm_conn.create_user(employee.sm_login, employee.password, test_role_id)
+                bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} {employee.sm_login}. Выполнено")
             except Exception as e:
                 sm_success = False
                 bitrix_connector.send_msg_error(
-                    f"СуперМаг Глобальный. Создание: Ошибка при создании первичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
-        elif sm_long_login:
-            try:
-                sm_success = sm_conn.create_user(sm_long_login, employee.password, test_role_id)
-                bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
-            except Exception as e:
-                sm_success = False
-                bitrix_connector.send_msg_error(
-                    f"СуперМаг Глобальный. Создание: Ошибка при создании вторичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
+                    f"СуперМаг Глобальный. Создание: Ошибка при создании первичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} {employee.sm_login}. Ошибка {e}")
+        # elif sm_long_login:
+        #     try:
+        #         sm_success = sm_conn.create_user(sm_long_login, employee.password, test_role_id)
+        #         bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+        #     except Exception as e:
+        #         sm_success = False
+        #         bitrix_connector.send_msg_error(
+        #             f"СуперМаг Глобальный. Создание: Ошибка при создании вторичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
 
-        elif sm_full_login:
-            try:
-                sm_success = sm_conn.create_user(sm_full_login, employee.password, test_role_id)
-                bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
-            except Exception as e:
-                sm_success = False
-                bitrix_connector.send_msg_error(
-                    f"СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
+        # elif sm_full_login:
+        #     try:
+        #         sm_success = sm_conn.create_user(sm_full_login, employee.password, test_role_id)
+        #         bitrix_connector.send_msg(f"СуперМаг Глобальный. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+        #     except Exception as e:
+        #         sm_success = False
+        #         bitrix_connector.send_msg_error(
+        #             f"СуперМаг Глобальный.Создание: Ошибка при создании третичного логина в SM у сотрудника {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} - {e}")
 
         else:
             bitrix_connector.send_msg(
-                f"СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {sm_login}, {sm_long_login}, {sm_full_login} уже существуют")
+                f"СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {employee.sm_login} уже существует")
 
 
     sm_local_success = True
-    if flags['SM_LOCAL']:
+    if flags['SM_LOCAL'] and store_names:
         for dbname in store_names:
             sm_local_success = sm_local_success and sm_conn.create_user_in_local_db(dbname,employee.sm_login,employee.password, test_role_id)
             bitrix_connector.send_msg(f"СуперМаг Локальный. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} на должность {userData['J2'].value} создан аккаунт в {dbname} c логином {employee.sm_login}")

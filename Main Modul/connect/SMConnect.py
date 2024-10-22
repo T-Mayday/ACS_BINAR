@@ -63,7 +63,7 @@ class SMConnect:
             self.cursor.callproc(procedure_name, params)
             self.connection.commit()
         except cx_Oracle.DatabaseError as e:
-            bitrix_connector.send_msg_error(f"SM: Ошибка выполнения процедуры: {query} {e}")
+            bitrix_connector.send_msg_error(f"SM: Ошибка выполнения процедуры: {procedure_name} {params} {e}")
             raise
 
     def user_exists(self, surname):
@@ -72,7 +72,11 @@ class SMConnect:
         FROM dual
         """
         result = self.execute_query(query)
-        return result[0] if result else -1
+        if result:
+            r = int(result[0][0])
+        else:
+            r = -1
+        return r
 
     def create_user(self, username, password, role):
         try:
@@ -93,7 +97,7 @@ class SMConnect:
 #            raise
             return False
 
-    def block_user(self, login, user_id):
+    def block_user(self, login):
         try:
             query = f"""
             BEGIN
@@ -101,20 +105,20 @@ class SMConnect:
 
                 UPDATE Supermag.SMStaff
                 SET UserEnabled = '0'
-                WHERE ID = {user_id};
+                WHERE surname = {login};
 
                 COMMIT;
             END;
             """
             self.execute_update(query)
-            bitrix_connector.send_msg(f"SM Блокировка: {login} с ID {user_id}. Выполнено успешно.")
+            bitrix_connector.send_msg(f"SM Блокировка: {login}. Выполнено успешно.")
             return True
         except cx_Oracle.DatabaseError as e:
-            bitrix_connector.send_msg_error(f"SM Блокировка: {login} с ID {user_id}. Ошибка {e}")
+            bitrix_connector.send_msg_error(f"SM Блокировка: {login}. Ошибка {e}")
 #            raise
             return False
 
-    def unblock_user(self, login, user_id):
+    def unblock_user(self, login):
         try:
             query = f"""
             BEGIN
@@ -122,16 +126,16 @@ class SMConnect:
 
                 UPDATE Supermag.SMStaff
                 SET UserEnabled = '1'
-                WHERE ID = {user_id};
+                WHERE ID = {login};
 
                 COMMIT;
             END;
             """
             self.execute_update(query)
-            bitrix_connector.send_msg(f"SM: Разблокировка. {login} с ID {user_id}. Выполнено успешно.")
+            bitrix_connector.send_msg(f"SM: Разблокировка. {login}. Выполнено успешно.")
             return True
         except cx_Oracle.DatabaseError as e:
-            bitrix_connector.send_msg_error(f"SM: Разблокировка. {login} с ID {user_id}. Ошибка: {e}")
+            bitrix_connector.send_msg_error(f"SM: Разблокировка. {login}. Ошибка: {e}")
 #            raise
             return False
 

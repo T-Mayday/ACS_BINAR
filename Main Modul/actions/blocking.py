@@ -268,52 +268,51 @@ def blocking_user(file_path):
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
         # поиск по логинам в SM
-        sm_login = sm_conn.user_exists(employee.sm_login) == -1
-        sm_long_login = sm_conn.user_exists(employee.sm_login_login) == -1
-        sm_full_login = sm_conn.user_exists(employee.sm_full_login) == -1
+        sm_login = sm_conn.user_exists(employee.sm_login) 
+        sm_long_login = sm_conn.user_exists(employee.sm_login_login) 
+        sm_full_login = sm_conn.user_exists(employee.sm_full_login) 
         if sm_login:
             try:
                 if state == '1':
-                    sm_success = sm_conn.block_user(sm_login)
-                    bitrix_connector.send_msg(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Выполнено")
+                    sm_success = sm_conn.block_user(employee.sm_login)
+                    bitrix_connector.send_msg(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {employee.sm_login}. Выполнено")
                 else:
                     bitrix_connector.send_msg(
-                        f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Выполнено")
+                        f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {employee.sm_login}. Выполнено")
             except Exception as e:
                 sm_success = False
-                bitrix_connector.send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value} {sm_login}. Не выполнено')
-
-        elif sm_long_login:
-            try:
-                if state == '1':
-                    sm_success = sm_conn.block_user(sm_long_login)
-                    bitrix_connector.send_msg(
-                        f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_long_login}. Выполнено")
-                else:
-                    bitrix_connector.send_msg(
-                        f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_long_login}. Выполнено")
-            except Exception as e:
-                sm_success = False
-                bitrix_connector.send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено")
-        elif sm_full_login:
-            try:
-                if state == '1':
-                    sm_success = sm_conn.block_user(sm_full_login)
-                    bitrix_connector.send_msg(
-                        f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_full_login}. Выполнено")
-                else:
-                    bitrix_connector.send_msg(
-                        f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_full_login}. Выполнено")
-            except Exception as e:
-                sm_success = False
-                bitrix_connector.send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено")
+                bitrix_connector.send_msg_error(f'СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value} {employee.sm_login}. Не выполнено')
+        # elif sm_long_login:
+        #     try:
+        #         if state == '1':
+        #             sm_success = sm_conn.block_user(sm_long_login)
+        #             bitrix_connector.send_msg(
+        #                 f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_long_login}. Выполнено")
+        #         else:
+        #             bitrix_connector.send_msg(
+        #                 f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_long_login}. Выполнено")
+        #     except Exception as e:
+        #         sm_success = False
+        #         bitrix_connector.send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_long_login}. Не выполнено")
+        # elif sm_full_login:
+        #     try:
+        #         if state == '1':
+        #             sm_success = sm_conn.block_user(sm_full_login)
+        #             bitrix_connector.send_msg(
+        #                 f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_full_login}. Выполнено")
+        #         else:
+        #             bitrix_connector.send_msg(
+        #                 f"СуперМаг Глобальный (Тест). Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_full_login}. Выполнено")
+        #     except Exception as e:
+        #         sm_success = False
+        #         bitrix_connector.send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {sm_full_login}. Не выполнено")
         else:
-            bitrix_connector.send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname}. Не выполнено")
+            bitrix_connector.send_msg_error(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {employee.sm_login}. Не выполнено")
 
     sm_local_success = True
     if flags['SM_LOCAL'] and flags['Normal_account']:
         sm_local_success = True
-        return sm_local_success
+#        return sm_local_success
 
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
@@ -334,7 +333,7 @@ def blocking_user(file_path):
                 f'BX24. Блокировка: {employee.firstname} {employee.lastname} {employee.surname}. Пользователь не найден в AD. Не выполнено.')
     else:
         bx24_success = True
-        return bx24_success
+#        return bx24_success
 
     # Блокировка МД АУДИТ
     md_success = True
@@ -351,13 +350,13 @@ def blocking_user(file_path):
                         f"MD_AUDIT. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
             else:
                 md_success = True
-                return md_success
+#                return md_success
         else:
             md_success = True
-            return md_success
+#            return md_success
     else:
         md_success = True
-        return md_success
+#        return md_success
 
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
@@ -369,11 +368,11 @@ def blocking_user(file_path):
                 log.info(
                     f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
-            ad_success = True
-            return ad_success
-    else:
-        ad_success = True
-        return ad_success
+            ad_success = False
+#            return ad_success
+    # else:
+    #     ad_success = True
+#        return ad_success
     
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success and md_success:
         return True
