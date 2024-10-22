@@ -113,11 +113,10 @@ class Bitrix24Connector:
             if result.get('result'):
                 user_info = result.get('result')[0]
                 user_id = user_info.get('ID')
-                user_active = user_info.get('ACTIVE')
-                if user_active == 'Y':
+                is_active = user_info.get('ACTIVE', False)
+                if is_active:
                     return user_id
                 else:
-
                     return None
             if result.get('error'):
                 self.send_msg_error(
