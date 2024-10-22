@@ -111,8 +111,13 @@ class Bitrix24Connector:
             bx24.refresh_tokens()
             result = bx24.call("user.get", {"LAST_NAME": last_name, "NAME": name, "SECOND_NAME": second_name})
             if result.get('result'):
-                r = result.get('result')[0]
-                return r.get('ID')
+                user_info = result.get('result')[0]
+                user_id = user_info.get('ID')
+                user_active = user_info.get('ACTIVE')
+                if user_active == 'Y':
+                    return user_id
+                else:
+                    return None
             if result.get('error'):
                 self.send_msg_error(
                     f"BX24. Пользователь с ФИО '{last_name} {name} {second_name}' не найден. {result.get('error')[0]}")
