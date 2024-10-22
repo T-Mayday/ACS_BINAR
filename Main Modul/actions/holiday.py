@@ -150,6 +150,6 @@ def holiday(file_path):
                     f"BX24. {state_holiday.upper()} (Тест): Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")
         else:
             bitrix_connector.send_msg(
-                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Ошибка. Сотрудник не найден по ФИО.")
+                f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Ошибка. Сотрудник не найден по ФИО или не активен.")
     return bx24_success
 
