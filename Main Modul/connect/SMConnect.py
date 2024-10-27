@@ -94,7 +94,6 @@ class SMConnect:
             return True
         except cx_Oracle.DatabaseError as e:
             bitrix_connector.send_msg_error(f"SM: Создание. Пользователь {username}. Ошибка : {e}")
-#            raise
             return False
 
     def block_user(self, login):

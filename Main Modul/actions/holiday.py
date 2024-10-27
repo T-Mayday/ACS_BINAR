@@ -35,7 +35,7 @@ def check_existing_holiday(user_id, start_date, end_date):
     try:
         existing_holidays = bx24.call('lists.element.get', {
             'IBLOCK_TYPE_ID': 'bitrix_processes',
-            'IBLOCK_ID': '25',
+            'IBLOCK_ID': '52',
             'FILTER': {
                 'CREATED_BY': user_id
             }
@@ -43,8 +43,8 @@ def check_existing_holiday(user_id, start_date, end_date):
 
         if 'result' in existing_holidays and existing_holidays['result']:
             for holiday in existing_holidays['result']:
-                holiday_start = next(iter(holiday['PROPERTY_101'].values()), None)
-                holiday_end = next(iter(holiday['PROPERTY_103'].values()), None)
+                holiday_start = next(iter(holiday['PROPERTY_320'].values()), None)
+                holiday_end = next(iter(holiday['PROPERTY_322'].values()), None)
 
                 if holiday_start == start_date and holiday_end == end_date:
                     return True
@@ -104,14 +104,14 @@ def holiday(file_path):
         'другое': f'Здравствуйте, Ваше отсутствие зарегистрировано в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.'
     }
 
-
     bx24_success = True
+
     if flags['BX24'] and flags['Normal_account']:
         user_id = bitrix_connector.search_user(bx24,lastname, firstname, surname)
         if not (user_id is None):
             if state == "1":
                 if state_holiday.lower() in type_holiday:
-                    existence_date = check_existing_holiday(user_id,start_holiday,end_holiday)
+                    existence_date = check_existing_holiday(user_id, start_holiday, end_holiday)
                     if not existence_date:
                         result = type_holiday[state_holiday.lower()]
                         date = {
