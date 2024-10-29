@@ -25,14 +25,14 @@ class MDAUIDConnect:
             data = response.json()
             if data:
                 user_id = data[0]['id']
-                bitrix_connector.send_msg(f"MD_AUDIT. ПОИСК. Пользователь {email} с ID {user_id} найден.")
-                return user_id
+#                bitrix_connector.send_msg(f"MD_AUDIT. ПОИСК. Пользователь {email} с ID {user_id} найден.")
+                return data[0]
             else:
                 bitrix_connector.send_msg_error(f"MD_AUDIT. ПОИСК. Пользователь с таким {email} не найден.")
-                return None
+                return []
         else:
             bitrix_connector.send_msg_error(f"MD_AUDIT. ПОИСК. Ошибка {response.status_code}: {response.text}")
-            return None
+            return []
 
     def block_user(self, user_id, lastname, firstname, surname, department, postjob):
         url = f"{self.base_url}/orgstruct/users/{user_id}"

@@ -73,9 +73,9 @@ class SMConnect:
         """
         result = self.execute_query(query)
         if result:
-            r = int(result[0][0])
+            r = result[0]
         else:
-            r = -1
+            r = []
         return r
 
     def create_user(self, username, password, role):
@@ -94,6 +94,7 @@ class SMConnect:
             return True
         except cx_Oracle.DatabaseError as e:
             bitrix_connector.send_msg_error(f"SM: Создание. Пользователь {username}. Ошибка : {e}")
+#            raise
             return False
 
     def block_user(self, login):
@@ -104,7 +105,7 @@ class SMConnect:
 
                 UPDATE Supermag.SMStaff
                 SET UserEnabled = '0'
-                WHERE surname = {login};
+                WHERE surname = '{login}';
 
                 COMMIT;
             END;
