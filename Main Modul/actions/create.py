@@ -503,13 +503,11 @@ def create_user(file_path):
             bitrix_connector.send_msg(
                 f"СуперМаг Глобальный. Создание: У сотрудника {employee.firstname, employee.lastname, employee.surname} все логины {employee.sm_login} уже существует")
 
-
     sm_local_success = True
     if flags['SM_LOCAL'] and store_names:
         for dbname in store_names:
             sm_local_success = sm_local_success and sm_conn.create_user_in_local_db(dbname,employee.sm_login,employee.password, test_role_id)
             bitrix_connector.send_msg(f"СуперМаг Локальный. Создание: Сотруднику {employee.firstname, employee.lastname, employee.surname} на должность {userData['J2'].value} создан аккаунт в {dbname} c логином {employee.sm_login}")
-
 
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
         return True

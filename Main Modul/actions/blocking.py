@@ -193,6 +193,8 @@ def block_ad_user(conn, user, employee, userData):
                     return False
                 finally:
                     connector.disconnect_ad(conn)
+            else:
+                return True
 
 # Блокировка в BX24
 def block_user_bitrix(bx24, user_id, employee, userData):
