@@ -274,7 +274,7 @@ def blocking_user(file_path):
         else:
             c1_success = True
             bitrix_connector.send_msg(
-                f"1С. Блокировка (Тест): Сотрудник {employee.firstname, employee.lastname, employee.surname}. Выполнено")
+                f"1С. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
 
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:

@@ -157,13 +157,17 @@ class SMConnect:
                 """, store_id=store_id)
 
                 result = cursor.fetchone()
+#                result = cursor.fetchall()
+#                cursor.close()
                 return {
                     "id": result[0],
                     "name": result[1],
                     "dbname": result[2]
                 } if result else None
-
         except cx_Oracle.DatabaseError as e:
+            bitrix_connector.send_msg_error(f"SM: Ошибка получения данных по store_id={store_id}: {e}")
+            raise
+        except Exception as e:
             bitrix_connector.send_msg_error(f"SM: Ошибка получения данных по store_id={store_id}: {e}")
             raise
 

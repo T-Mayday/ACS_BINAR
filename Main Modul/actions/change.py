@@ -6,7 +6,7 @@ import random
 import string
 
 # Подключение файла create.py
-from actions.create import create_user
+from actions.create import create_user, create_in_BX24
 
 # подключение файла поиска
 from outher.search import user_verification
@@ -193,7 +193,7 @@ def bitrix_call(bx24, user_id, new_data, employee, userData):
                 success = False
             else:
                 bitrix_connector.send_msg(
-                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
+                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Выполнено")
                 success = True
         except Exception as e:
             bitrix_connector.send_msg_error(f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка при изменение пользователя в Битрикс24: {e}")
@@ -213,8 +213,7 @@ def send_in_1c(url, data, employee, userData):
                 else:
                     result = response.text
                     bitrix_connector.send_msg_error(
-
-                        f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены, результат {response.status_code} {result}")
+                        f"1С. Изменение: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Данные {data} отправлены {url}, результат {response.status_code} {result}")
                     return False
             else:
                 bitrix_connector.send_msg(
@@ -270,63 +269,33 @@ def change_user(file_path):
 
     def update_1c():
         if (flags['ZUP'] or flags['RTL'] or flags['ERP']) and flags['Normal_account']:
-            # Поиск друга сотрудника одной должности
-            friendly = bitrix_connector.find_jobfriend(bx24,userData['J2'].value, userData['H2'].value)
+            existence = connector.search_in_ad(INN)
+            if not (existence is None) and len(existence) > 0:
+                user_dn, attributes = existence[0]
+                cn = attributes.get('cn', [b''])[0].decode('utf-8')
+                login = f"\\BINLTD\{cn}"
+                # Поиск друга сотрудника одной должности
+                friendly = bitrix_connector.find_jobfriend(bx24,userData['J2'].value, userData['H2'].value)
 
-            ZUP_value, RTL_value, ERP_value = (
-                1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
+                ZUP_value, RTL_value, ERP_value = (
+                    1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
-            url = connector_1c.getUrlChanges()
-            data = {
-                'full_name': f'{userData["B2"].value} {userData["C2"].value} {userData["D2"].value}',
-                'ERP': ERP_value,
-                'RTL': RTL_value,
-                'ZUP': ZUP_value,
-                'job_friend': friendly
-            }
-            return send_in_1c(url, data, employee, userData)
+                url = connector_1c.getUrlChanges()
+                data = {
+                    'full_name': f'{userData["B2"].value} {userData["C2"].value} {userData["D2"].value}',
+                    'domain': login,
+                    'ERP': ERP_value,
+                    'RTL': RTL_value,
+                    'ZUP': ZUP_value,
+                    'job_friend': friendly
+                }
+                return send_in_1c(url, data, employee, userData)
         else:
             return True
 
-    bx_success = False
-    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
-
-        if len(existence) > 0:
-            user_dn, attributes = existence[0]
-            mail = attributes.get('mail', [b''])[0].decode('utf-8')
-
-            user_info = bitrix_connector.search_email(bx24, email)
-            if user_info:
-                if state == '1':
-                    bx_success = bitrix_call(bx24, user_info.get('ID'), new_data, employee, userData)
-                    # bitrix_connector.send_msg(
-                    #     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
-#                    return bx_success
-                else:
-                    bitrix_connector.send_msg(
-                        f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
-        else:
-            user_info = bitrix_connector.search_user(bx24, employee.lastname, employee.firstname, employee.surname)
-            if user_info:
-                if state == '1':
-                    bx_success = bitrix_call(bx24, user_info.get('ID'), new_data, employee, userData)
-                    return bx_success
-                else:
-                    bitrix_connector.send_msg(
-                        f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
-            else:
-                bitrix_connector.send_msg_error(
-                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
-                bx_success = True
-                return bx_success
-    else:
-        bx_success = True
-        return bx_success
-
     ad_success = False
     if flags['AD'] and flags['Normal_account']:
-
+        existence = connector.search_in_ad(INN)
         if existence:
             if state == '1':
                 ad_success = update_ad_attributes(conn, existence, name_atrr, employee)
@@ -336,11 +305,48 @@ def change_user(file_path):
                 )
         else:
             ad_success = create_user(file_path)
-            return ad_success
+#            return ad_success
     else:
         ad_success = True
-        return ad_success
+#        return ad_success
 
+    bx_success = False
+    if flags['AD'] and flags['BX24'] and flags['Normal_account']:
+        existence = connector.search_in_ad(INN)
+        if len(existence) > 0:
+            user_dn, attributes = existence[0]
+            mail = attributes.get('mail', [b''])[0].decode('utf-8')
+
+            user_info = bitrix_connector.search_email(bx24, mail)
+            if user_info:
+                if state == '1':
+                    bx_success = bitrix_call(bx24, user_info.get('ID'), new_data, employee, userData)
+                    # bitrix_connector.send_msg(
+                    #     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
+#                    return bx_success
+                else:
+                    bitrix_connector.send_msg(
+                        f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
+            else:
+                bx_success = create_in_BX24(mail, bx24, employee, userData, conn)
+        else:
+            user_info = bitrix_connector.search_user(bx24, employee.lastname, employee.firstname, employee.surname)
+            if user_info:
+                if state == '1':
+                    bx_success = bitrix_call(bx24, user_info.get('ID'), new_data, employee, userData)
+#                    return bx_success
+                else:
+                    bitrix_connector.send_msg(
+                        f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
+            else:
+                bitrix_connector.send_msg_error(
+                    f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
+#                bx_success = create_user(file_path)
+#                return bx_success
+    else:
+        bx_success = True
+#        return bx_success
+    
     if ad_success and bx_success and update_1c():
         return True
     else:
