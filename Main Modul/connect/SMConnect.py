@@ -141,7 +141,7 @@ class SMConnect:
 
     def get_store(self, store_id):
         try:
-            with self.cursor as cursor:
+            with self.connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT
                         l.id,
@@ -157,8 +157,6 @@ class SMConnect:
                 """, store_id=store_id)
 
                 result = cursor.fetchone()
-#                result = cursor.fetchall()
-#                cursor.close()
                 return {
                     "id": result[0],
                     "name": result[1],

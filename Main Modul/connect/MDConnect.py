@@ -24,8 +24,6 @@ class MDAUIDConnect:
         if response.status_code == 200:
             data = response.json()
             if data:
-                user_id = data[0]['id']
-#                bitrix_connector.send_msg(f"MD_AUDIT. ПОИСК. Пользователь {email} с ID {user_id} найден.")
                 return data[0]
             else:
                 bitrix_connector.send_msg_error(f"MD_AUDIT. ПОИСК. Пользователь с таким {email} не найден.")

@@ -35,7 +35,7 @@ def check_existing_holiday(user_id, start_date, end_date):
     try:
         existing_holidays = bx24.call('lists.element.get', {
             'IBLOCK_TYPE_ID': 'bitrix_processes',
-            'IBLOCK_ID': '25',
+            'IBLOCK_ID': '52',
             'FILTER': {
                 'CREATED_BY': user_id
             }
@@ -43,8 +43,8 @@ def check_existing_holiday(user_id, start_date, end_date):
 
         if 'result' in existing_holidays and existing_holidays['result']:
             for holiday in existing_holidays['result']:
-                holiday_start = next(iter(holiday['PROPERTY_101'].values()), None)
-                holiday_end = next(iter(holiday['PROPERTY_103'].values()), None)
+                holiday_start = next(iter(holiday['PROPERTY_320'].values()), None)
+                holiday_end = next(iter(holiday['PROPERTY_322'].values()), None)
 
                 if holiday_start == start_date and holiday_end == end_date:
                     return True
@@ -60,6 +60,7 @@ def holiday(file_path):
     excel_data = load_workbook(file_path).active
     df_users = pd.read_excel(file_path)
     df_roles = pd.read_excel('info.xlsx')
+
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
     random_string = generate_random_string()

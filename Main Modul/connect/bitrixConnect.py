@@ -1,3 +1,5 @@
+# Функции для работа с Bitrix24
+
 import configparser
 import requests as req
 from urllib.parse import urlparse, parse_qs
@@ -7,6 +9,7 @@ from pybitrix24 import Bitrix24
 from message.message import log
 
 class Bitrix24Connector:
+    #  Получение данных из ini файла
     def __init__(self):
         self.config = configparser.ConfigParser()
         self.config.read('connect_domain.ini')
@@ -25,6 +28,7 @@ class Bitrix24Connector:
         query_params = parse_qs(parsed_url.query)
         return query_params.get(param_name)[0]
 
+    # Подключение к Bitrix24
     def connect(self):
         bx24 = Bitrix24(self.linkBx24, self.clientId, self.clientSecret)
         rsp = req.get(bx24.build_authorization_url(), auth=HTTPBasicAuth(self.user_login, self.user_password))
@@ -32,6 +36,7 @@ class Bitrix24Connector:
         tokens = bx24.obtain_tokens(auth_code, scope='')
         return bx24, tokens
 
+    # Отправка сообщений в чат для трассировки
     def send_msg(self, msg):
         bx24, tokens = self.connect()
         try:
@@ -41,6 +46,7 @@ class Bitrix24Connector:
         except Exception as e:
             log.exception("Error sending message", e)
 
+    # Отправка сообщений в чат для трассировки
     def send_msg_error(self, msg):
         bx24, tokens = self.connect()
         try:
@@ -50,6 +56,7 @@ class Bitrix24Connector:
         except Exception as e:
             log.exception(e)
 
+    # Отправка сообщений в чат адмнистраторов
     def send_msg_adm(self, msg):
         bx24, tokens = self.connect()
         try:
@@ -58,6 +65,8 @@ class Bitrix24Connector:
             res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
         except Exception as e:
             log.exception("Error sending message", e)
+
+    # Отправка сообщение пользователям Bitrix24
     def send_msg_user(self, user_id, msg):
         bx24, tokens = self.connect()
         try:
@@ -73,7 +82,9 @@ class Bitrix24Connector:
         except Exception as e:
             log.exception("Error sending message", e)
 
-    def find_jobfriend(self, bx24, post_job, codeBX24):
+    # Поиск сосодрудника для 1с
+    def find_jobfriend(self, post_job, codeBX24):
+        bx24, tokens = self.connect()
         filter_params = {
             'FILTER': {
                 'WORK_POSITION': post_job,
@@ -89,32 +100,32 @@ class Bitrix24Connector:
             self.send_msg_error(f"BX24: Ошибка поиска сотрудника {post_job} в департаменте {codeBX24}: {e}")
         return None
 
-    def search_email(self, bx24, email):
+    # Поиск по Почте
+    def search_email(self, email):
+        bx24, tokens = self.connect()
         try:
             bx24.refresh_tokens()
-
             result = bx24.call("user.get", {"EMAIL": email})
-
             if 'result' in result and result['result']:
                 user_info = result['result'][0]
-                return user_info
+                return user_info.get('ID')
             else:
-                result = []
-                return result
-
+                return []
         except Exception as e:
             self.send_msg_error(f"BX24: Ошибка при поиске пользователя по email '{email}': {e}")
-            return None
+            return []
 
-    def search_user(self, bx24, last_name, name, second_name):
+    # Поиск по ФИО
+    def search_user(self, last_name, name, second_name):
+        bx24, tokens = self.connect()
         try:
             bx24.refresh_tokens()
             result = bx24.call("user.get", {"LAST_NAME": last_name, "NAME": name, "SECOND_NAME": second_name})
             if result.get('result'):
                 user_info = result.get('result')[0]
                 user_id = user_info.get('ID')
-                is_active = user_info.get('ACTIVE', False)
-                if is_active:
+                user_active = user_info.get('ACTIVE')
+                if user_active == 'Y':
                     return user_id
                 else:
                     return None
@@ -126,14 +137,79 @@ class Bitrix24Connector:
             self.send_msg_error(f"BX24. Ошибка при получении пользователей: {last_name} {name} {second_name} {e}")
             return None
 
-    def bitrix_user_update(self, bx24, user_id, new_data):
+    # Обновление пользователя
+    def update_user(self, user_id, new_data, employee, userData):
+        bx24, tokens = self.connect()
         try:
             bx24.refresh_tokens()
             result = bx24.call('user.update', {'ID': user_id, **new_data})
-            # self.send_msg(
-            #     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {result}. Выполнено")
-            return True
+            if result.get('error'):
+                self.send_msg_error(
+                    f"BX24. Ошибка при изменении пользователя: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {result.get('error_description')}")
+                return False
+            if result.get('result'):
+                self.send_msg(
+                    f"BX24. Обновление данных сотрудника {employee.firstname} {employee.lastname} {employee.surname} ID = {user_id}. Выполнено.")
+                return True
         except Exception as e:
             self.send_msg_error(f"BX24. Ошибка при обновлении данных {user_id} {new_data} Ошибка {e}")
-            return  False
+            return False
+
+    # Создания пользователя
+    def create_user(self, email, employee, userData):
+        bx24, tokens = self.connect()
+        try:
+            user_data = {
+                "NAME": employee.firstname,
+                "LAST_NAME": employee.lastname,
+                "SECOND_NAME": employee.surname,
+                "EMAIL": email,
+                "UF_DEPARTMENT": str(userData['H2'].value),
+                "ACTIVE": "Y",
+                "WORK_POSITION": str(userData["J2"].value),
+            }
+            bx24.refresh_tokens()
+            create = bx24.call('user.add', user_data)
+            if create.get('error'):
+                error_message = create.get('error_description')
+                self.send_msg_error(
+                    f"BX24.Создание !Не выполнено: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_data} {error_message}")
+                return False
+            if create.get('result'):
+                user_id = create.get('result')
+                self.send_msg(
+                        f"BX24.Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} ID = {user_id}. Выполнено")
+                return True
+            else:
+                self.send_msg_error(
+                        f"BX24.Создание !Не выполнено: Сотрудник {employee.firstname, employee.lastname, employee.surname}. Ошибка: {create.get('result')}")
+                return False
+        except Exception as e:
+            self.send_msg_error(
+                f"BX24. Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {e}")
+            return False
+
+    # Блокировка пользователя
+    def block_user(self, user_id, employee, userData):
+        bx24, tokens = self.connect()
+        try:
+            bx24.refresh_tokens()
+            result = bx24.call('user.update', {
+                'ID': user_id,
+                'ACTIVE': 'N'
+            })
+            self.send_msg(
+                f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
+            return True
+        except Exception as e:
+            self.send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
+            return False
+
+
+
+
+
+
+
+
         

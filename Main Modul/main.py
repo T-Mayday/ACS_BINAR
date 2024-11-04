@@ -151,14 +151,13 @@ def process_file(file_path):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.02.11.2024'
+    ver = 'V.05.11.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
     else:
         mode = 'Тестовый режим!'
 
-#    bitrix_connector.send_msg_adm(f"Старт Версии {ver} {mode}")
     bitrix_connector.send_msg(f"Старт Версии {ver} {mode}")
     n = 0
     while True:

@@ -1,10 +1,9 @@
 from openpyxl import load_workbook
 import pandas as pd
-import ldap
 import requests
 import random
 import string
-import time
+
 
 
 # подключение файла поиска
@@ -17,7 +16,6 @@ from message.message import log
 from connect.bitrixConnect import Bitrix24Connector
 
 bitrix_connector = Bitrix24Connector()
-bx24, tokens = bitrix_connector.connect()
 
 # подключение connect1c
 from connect.connect1C import Connector1C
@@ -173,77 +171,14 @@ class Person:
             return f"{firstname_translit.lower()}_{parts[1].lower()}_{lastname_translit.lower()}"
         return login
 
-# Блокировка в AD
-def block_ad_user(conn, user, employee, userData):
-        block_attr = {
-            'userAccountControl': b'514'
-        }
-        user_dn, user_attrs = user[0]
-        for attr_name, attr_value in block_attr.items():
-            if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
-                mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
-                try:
-                    conn.modify_s(user_dn, mod_attrs)
-                    bitrix_connector.send_msg(
-                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
-                    return True
-                except Exception as e:
-                    bitrix_connector.send_msg_error(
-                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено - ошибка {str(e)}")
-                    return False
-                finally:
-                    connector.disconnect_ad(conn)
-            else:
-                return True
-
-# Блокировка в BX24
-def block_user_bitrix(bx24, user_id, employee, userData):
-        try:
-            bx24.refresh_tokens()
-            result = bx24.call('user.update', {
-                'ID': user_id,
-                'ACTIVE': 'N'
-            })
-            bitrix_connector.send_msg(
-                f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
-            return True
-        except Exception as e:
-            bitrix_connector.send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
-            return False
-
-# Отправка в 1с
-def send_in_1c(url, data, employee, userData):
-        try:
-            headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, json=data, headers=headers)
-            if response.status_code == 200:
-                result = response.text
-                if state == '1':
-                    bitrix_connector.send_msg(f"1C. Блокировка : {employee.lastname, employee.firstname, employee.surname} Выполнено")
-                    return True
-                else:
-                    bitrix_connector.send_msg(f"1C. Блокировка (Тест) : {employee.lastname, employee.firstname, employee.surname} Выполнено")
-                    return False
-            else:
-
-                bitrix_connector.send_msg_error(f"1C. Блокировка. У сотрудника {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data} {response.status_code}")
-                return False
-        except requests.exceptions.RequestException as e:
-            bitrix_connector.send_msg_error(f'1C. Блокировка. У сотрудника {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка: {url} {data} {response.status_code}')
-            return False
-
-
 
 def blocking_user(file_path):
-    global base_dn, state, cipher_dict
+    global base_dn, state
 
     userData = load_workbook(file_path).active
 
     df_users = pd.read_excel(file_path)
     df_roles = pd.read_excel('info.xlsx')
-
-    # подключение к ldap
-    conn = connector.connect_ad()
 
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
@@ -254,10 +189,13 @@ def blocking_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
+    # Блокировка в 1C
     c1_success = True
     if (flags['ZUP'] or flags['RTL'] or flags['ERP']) and flags['Normal_account']:
+        action = 'Блокировка'
+
         # Поиск друга сотрудника одной должности
-        friendly = bitrix_connector.find_jobfriend(bx24,userData['J2'].value, userData['G2'].value)
+        friendly = bitrix_connector.find_jobfriend(userData['J2'].value, userData['G2'].value)
 
         ZUP_value, RTL_value, ERP_value = (1 if flags['ZUP'] else 0, 1 if flags['RTL'] else 0, 1 if flags['ERP'] else 0)
 
@@ -270,12 +208,13 @@ def blocking_user(file_path):
             'job_friend': friendly
         }
         if state == '1':
-            c1_success = send_in_1c(url, data, employee, userData)
+            c1_success = connector_1c.send_rq(url, data, employee, userData, action)
         else:
             c1_success = True
             bitrix_connector.send_msg(
                 f"1С. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
 
+    # Блокировка в SM Глобальный
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
@@ -287,7 +226,7 @@ def blocking_user(file_path):
             if user_exists:
                 try:
                     if state == '1':
-                        if user_exists[0]=='1': 
+                        if user_exists[0] == '1':
                             sm_success = sm_conn.block_user(employee.sm_login)
                             bitrix_connector.send_msg(f"СуперМаг Глобальный. Блокировка: {employee.lastname, employee.firstname, employee.surname} {sm_login}. Выполнено")
                     else:
@@ -300,20 +239,19 @@ def blocking_user(file_path):
     sm_local_success = True
     if flags['SM_LOCAL'] and flags['Normal_account']:
         sm_local_success = True
-#        return sm_local_success
 
+    # Блокировка в Bitrix24
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
         if len(existence) > 0:
             user_dn, attributes = existence[0]
             mail = attributes.get('mail', [b''])[0].decode('utf-8')
-            user_info = bitrix_connector.search_email(bx24, mail)
+            user_info = bitrix_connector.search_email(mail)
             if user_info:
                 if state == '1':
-                    if user_info.get('Active')=='True':
-                        bx24.refresh_tokens()
-                        bx24_success = block_user_bitrix(bx24, user_info.get('ID'), employee, userData)
+                    if user_info.get('Active') == 'True':
+                        bx24_success = bitrix_connector.block_user(user_info.get('ID'), employee, userData)
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
@@ -323,31 +261,30 @@ def blocking_user(file_path):
                 f'BX24. Блокировка: {employee.firstname} {employee.lastname} {employee.surname}. Пользователь не найден в AD. Не выполнено.')
     else:
         bx24_success = True
-#        return bx24_success
 
-    # Блокировка МД АУДИТ
+    # Блокировка в МД АУДИТ
     md_success = True
     if flags['AD'] and flags['Normal_account']:
-        if len(existence) > 0:
+        if existence:
             user_dn, attributes = existence[0]
             mail = attributes.get('mail', [b''])[0].decode('utf-8')
-            user_info  = MD_AUDIT.find_user_by_email(mail)
+            user_info = MD_AUDIT.find_user_by_email(mail)
             if user_info:
                 if state == '1':
-                    if user_info.get('active')=='True':
+                    if user_info.get('active') == 'True':
                         md_success = MD_AUDIT.block_user(user_info.get('id'), employee.lastname, employee.firstname, employee.surname, userData['G2'].value, userData['J2'].value)
                 else:
                     bitrix_connector.send_msg(
                         f"MD_AUDIT. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
 
+    # Блокировка в Active Directory
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
-
         if existence:
             if state == '1':
-                ad_success = block_ad_user(conn, existence, employee, userData)
+                ad_success = connector.block_user(existence, employee, userData)
             else:
-                log.info(
+                bitrix_connector.send_msg(
                     f"AD. Блокировка (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
         else:
             ad_success = False
@@ -358,7 +295,67 @@ def blocking_user(file_path):
         return False
 
 
-
+#
+# # # Блокировка в AD
+# # def block_ad_user(conn, user, employee, userData):
+# #         block_attr = {
+# #             'userAccountControl': b'514'
+# #         }
+# #         user_dn, user_attrs = user[0]
+# #         for attr_name, attr_value in block_attr.items():
+# #             if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
+# #                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
+# #                 try:
+# #                     conn.modify_s(user_dn, mod_attrs)
+# #                     bitrix_connector.send_msg(
+# #                         f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
+# #                     return True
+# #                 except Exception as e:
+# #                     bitrix_connector.send_msg_error(
+# #                         f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено - ошибка {str(e)}")
+# #                     return False
+# #                 finally:
+# #                     connector.disconnect_ad(conn)
+# #             else:
+# #                 return True
+# #
+# # # Блокировка в BX24
+# # def block_user_bitrix(bx24, user_id, employee, userData):
+# #         try:
+# #             bx24.refresh_tokens()
+# #             result = bx24.call('user.update', {
+# #                 'ID': user_id,
+# #                 'ACTIVE': 'N'
+# #             })
+# #             bitrix_connector.send_msg(
+# #                 f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
+# #             return True
+# #         except Exception as e:
+# #             bitrix_connector.send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
+# #             return False
+#
+#
+#
+# # Отправка в 1с
+# def send_in_1c(url, data, employee, userData):
+#         try:
+#             headers = {'Content-Type': 'application/json'}
+#             response = requests.post(url, json=data, headers=headers)
+#             if response.status_code == 200:
+#                 result = response.text
+#                 if state == '1':
+#                     bitrix_connector.send_msg(f"1C. Блокировка : {employee.lastname, employee.firstname, employee.surname} Выполнено")
+#                     return True
+#                 else:
+#                     bitrix_connector.send_msg(f"1C. Блокировка (Тест) : {employee.lastname, employee.firstname, employee.surname} Выполнено")
+#                     return False
+#             else:
+#
+#                 bitrix_connector.send_msg_error(f"1C. Блокировка. У сотрудника {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data} {response.status_code}")
+#                 return False
+#         except requests.exceptions.RequestException as e:
+#             bitrix_connector.send_msg_error(f'1C. Блокировка. У сотрудника {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка: {url} {data} {response.status_code}')
+#             return False
 
 
 
