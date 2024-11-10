@@ -1,5 +1,4 @@
 # Функции для работы с LDAP Сервером
-
 import ldap
 from ldap.filter import escape_filter_chars
 import configparser
