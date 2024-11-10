@@ -1,9 +1,5 @@
 from openpyxl import load_workbook
 import pandas as pd
-import requests
-import random
-import string
-
 
 
 # подключение файла поиска
@@ -13,7 +9,7 @@ from outher.search import user_verification
 from message.message import log
 
 # Подключение Person
-from outher.person import Person
+from outher.person import Person, encrypt_inn
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -40,30 +36,6 @@ test_role_id = sm_conn.getRoleID()
 from connect.MDConnect import MDAUIDConnect
 MD_AUDIT = MDAUIDConnect()
 
-
-# Словарь для шифрования и обратный
-cipher_dict = {
-    "0": "g",
-    "1": "M",
-    "2": "k",
-    "3": "A",
-    "4": "r",
-    "5": "X",
-    "6": "b",
-    "7": "@",
-    "8": "#",
-    "9": "!"
-}
-reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
-def encrypt_inn(inn):
-    encrypted_inn = ''
-    for digit in inn:
-        if digit in cipher_dict:
-            encrypted_inn += cipher_dict[digit]
-        else:
-            log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
-            encrypted_inn += digit
-    return encrypted_inn
 
 
 def blocking_user(file_path):
@@ -159,6 +131,7 @@ def blocking_user(file_path):
     # Блокировка в МД АУДИТ
     md_success = True
     if flags['AD'] and flags['Normal_account']:
+        existence = connector.search_in_ad(INN)
         if existence:
             user_dn, attributes = existence[0]
             mail = attributes.get('mail', [b''])[0].decode('utf-8')

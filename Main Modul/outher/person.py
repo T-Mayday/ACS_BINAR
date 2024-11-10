@@ -1,11 +1,11 @@
 import random
 import string
 
-
 # Подключение ldapConnect
 from connect.ldapConnect import ActiveDirectoryConnector
 connector = ActiveDirectoryConnector()
 
+from message.message import log
 
 # Матрица перевода
 transliteration_dict = {
@@ -118,3 +118,31 @@ class Person:
         elif len(parts) == 3:
             return f"{firstname_translit.lower()}_{parts[1].lower()}_{lastname_translit.lower()}"
         return login
+
+
+# Словарь для шифрования и обратный
+cipher_dict = {
+    "0": "g",
+    "1": "M",
+    "2": "k",
+    "3": "A",
+    "4": "r",
+    "5": "X",
+    "6": "b",
+    "7": "@",
+    "8": "#",
+    "9": "!"
+}
+reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
+
+
+# Функция для шифрование ИНН
+def encrypt_inn(inn):
+    encrypted_inn = ''
+    for digit in inn:
+        if digit in cipher_dict:
+            encrypted_inn += cipher_dict[digit]
+        else:
+            log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
+            encrypted_inn += digit
+    return encrypted_inn

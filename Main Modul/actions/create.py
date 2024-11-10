@@ -1,10 +1,6 @@
 from openpyxl import load_workbook, Workbook
 import pandas as pd
-import ldap
-import ldap.modlist as modlist
-import requests
-import random
-import string
+
 
 # подключение файла поиска
 from outher.search import user_verification
@@ -13,7 +9,7 @@ from outher.search import user_verification
 from message.message import log
 
 # Подключение Person
-from outher.person import Person
+from outher.person import Person, encrypt_inn
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -38,33 +34,6 @@ sm_conn = SMConnect()
 sm_conn.connect_SM()
 test_role_id = sm_conn.getRoleID()
 
-# Словарь для шифрования и обратный
-cipher_dict = {
-    "0": "g",
-    "1": "M",
-    "2": "k",
-    "3": "A",
-    "4": "r",
-    "5": "X",
-    "6": "b",
-    "7": "@",
-    "8": "#",
-    "9": "!"
-}
-reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
-
-
-# Функция для шифрование ИНН
-def encrypt_inn(inn):
-    encrypted_inn = ''
-    for digit in inn:
-        if digit in cipher_dict:
-            encrypted_inn += cipher_dict[digit]
-        else:
-            log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
-            encrypted_inn += digit
-    return encrypted_inn
-
 
 
 # Функция записи логина и пароля
@@ -83,7 +52,7 @@ def save_login(phone_number, full_name, login):
         workbook.close()
 
 def create_user(file_path):
-    global base_dn, state, cipher_dict, name_domain, base_dn
+    global base_dn, state, name_domain, base_dn
 
     userData = load_workbook(file_path).active
 

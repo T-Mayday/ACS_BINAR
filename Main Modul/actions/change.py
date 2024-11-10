@@ -1,7 +1,5 @@
 from openpyxl import load_workbook
 import pandas as pd
-import random
-import string
 
 # Подключение файла create.py
 from actions.create import create_user
@@ -13,7 +11,7 @@ from outher.search import user_verification
 from message.message import log
 
 # Подключение Person
-from outher.person import Person
+from outher.person import Person, encrypt_inn
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -29,33 +27,6 @@ from connect.ldapConnect import ActiveDirectoryConnector
 connector = ActiveDirectoryConnector()
 base_dn = connector.getBaseDn()
 state = connector.getState()
-
-# Словарь для шифрования и обратный
-cipher_dict = {
-    "0": "g",
-    "1": "M",
-    "2": "k",
-    "3": "A",
-    "4": "r",
-    "5": "X",
-    "6": "b",
-    "7": "@",
-    "8": "#",
-    "9": "!"
-}
-reverse_cipher_dict = {v: k for k, v in cipher_dict.items()}
-
-
-# Функция для шифрование ИНН
-def encrypt_inn(inn):
-    encrypted_inn = ''
-    for digit in inn:
-        if digit in cipher_dict:
-            encrypted_inn += cipher_dict[digit]
-        else:
-            log.info(f"Ошибка шифрования: Символ '{digit}' присутсвует в ИНН ")
-            encrypted_inn += digit
-    return encrypted_inn
 
 
 def change_user(file_path):
@@ -171,6 +142,46 @@ def change_user(file_path):
         bx_success = True
     
     if ad_success and bx_success and c1_success:
+        existence = connector.search_in_ad(INN)
+        user_dn, attributes = existence[0]
+        mail = attributes.get('mail', [b''])[0].decode('utf-8')
+        user_info = bitrix_connector.search_email(mail)
+
+        # Проверка в каких 1С системах открыли-закрыли доступ
+        zup_enabled = flags['ZUP']
+        rtl_enabled = flags['RTL']
+        erp_enabled = flags['ERP']
+
+        # Формирование сообщения для 1С
+        c1_message = "Изменения в 1С:\n"
+        c1_message += "- Включен доступ к системе 1С:ЗУП\n" if zup_enabled else "- Отключен доступ к системе 1С:ЗУП\n"
+        c1_message += "- Включен доступ к системе 1С:Розница\n" if rtl_enabled else "- Отключен доступ к системе 1С:Розница\n"
+        c1_message += "- Включен доступ к системе 1С:ERP\n" if erp_enabled else "- Отключен доступ к системе 1С:ERP\n"
+
+        # Основное сообщение
+        message = "Здравствуйте, ваши данные в системе были успешно обновлены в следующих системах:\n"
+
+        if ad_success:
+            message += "- Active Directory\n"
+        if bx_success:
+            message += "- Bitrix24\n"
+        if c1_success:
+            message += "- 1С\n" + c1_message
+        message += f"\nОбновленные данные:\nОтдел: {userData['G2'].value} \nДолжность: {userData['J2'].value}"
+
+        # Отправка сообщения сотруднику и дублирование
+        try:
+            if user_info and user_info.get('ID'):
+                user_id = user_info.get('ID')
+                bitrix_connector.send_msg_user(user_id, message)
+
+                log_message = f"Сообщение отправлено сотруднику {employee.lastname} {employee.firstname} ID = {user_id}:\n'{message}'"
+                bitrix_connector.send_msg(log_message)
+
+        except Exception as e:
+            error_message = f"Ошибка при отправке уведомления сотруднику {employee.lastname} {employee.firstname}: {e}"
+            bitrix_connector.send_msg_error(error_message)
+
         return True
     else:
         return False
