@@ -97,6 +97,17 @@ def change_user(file_path):
         existence = connector.search_in_ad(INN)
         if existence:
             if state == '1':
+                user_dn, attributes = existence[0]
+                user_account_control = attributes.get('userAccountControl', [b''])[0]
+                uac_value = int(user_account_control.decode())
+                is_active = not (uac_value & 0x0002)
+                if not is_active:
+                    try:
+                        ad_success = connector.activate_user(user_dn, employee, userData)
+                    except Exception as e:
+                        ad_success = False
+                        bitrix_connector.send_msg_error(
+                            f"AD. Ошибка при активации учетной записи сотрудника {employee.firstname} {employee.lastname} {employee.surname}: {e}")
                 try:
                     ad_success =  connector.update_user(existence, name_atrr, employee, userData)
                 except Exception as e:
