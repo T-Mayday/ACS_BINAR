@@ -108,7 +108,7 @@ def holiday(file_path):
 
     bx24_success = True
     if flags['BX24'] and flags['Normal_account']:
-        user_id = bitrix_connector.search_user(bx24,lastname, firstname, surname)
+        user_id = bitrix_connector.search_user(lastname, firstname, surname)
         if not (user_id is None):
             if state == "1":
                 if state_holiday.lower() in type_holiday:

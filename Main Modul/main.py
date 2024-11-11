@@ -39,11 +39,17 @@ def move_file(file_path,output_dir):
         dest_name = os.path.join(output_dir,datetime.now().strftime('%H%M%S')+os.path.basename(file_path))
     else:
         dest_name = output_dir
-    shutil.move(file_path, dest_name)
+    try:
+        shutil.move(file_path, dest_name)
+    except Exception as e:
+        bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def move_file_waste(file_path,output_dir):
     if not os.path.exists( output_dir+os.path.basename(file_path) ):
-        shutil.move(file_path, output_dir)
+        try:
+            shutil.move(file_path, output_dir)
+        except Exception as e:
+            bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 # Перемещаем файлы из waste обратно в input через час
 def move_back():
@@ -65,7 +71,6 @@ def move_back():
             f"Перенесены следующие файлы обратно в input: {', '.join([os.path.basename(f) for f in files_to_move])}")
         for file_path in files_to_move:
             move_file(file_path, input_dir)
-
 
 # Проверка валидации данных
 def validate_user_data(workbook):
@@ -158,6 +163,7 @@ def main():
     else:
         mode = 'Тестовый режим!'
 
+#    bitrix_connector.send_msg_adm(f"Старт Версии {ver} {mode}")
     bitrix_connector.send_msg(f"Старт Версии {ver} {mode}")
     n = 0
     while True:

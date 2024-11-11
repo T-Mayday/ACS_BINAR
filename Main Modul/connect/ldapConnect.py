@@ -189,7 +189,7 @@ class ActiveDirectoryConnector:
 
         user_dn, user_attrs = user[0]
         updated_attrs = []
-        for attr_name, attr_value in new_attr.item():
+        for attr_name, attr_value in new_attr.items():
             if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
                 try:

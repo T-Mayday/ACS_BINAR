@@ -141,7 +141,7 @@ def change_user(file_path):
     else:
         bx_success = True
     
-    if ad_success and bx_success and c1_success:
+    if ad_success and bx_success and c1_success and flags['AD'] and flags['BX24'] and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
         user_dn, attributes = existence[0]
         mail = attributes.get('mail', [b''])[0].decode('utf-8')

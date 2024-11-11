@@ -108,7 +108,8 @@ class Bitrix24Connector:
             result = bx24.call("user.get", {"EMAIL": email})
             if 'result' in result and result['result']:
                 user_info = result['result'][0]
-                return user_info.get('ID')
+#                return user_info.get('ID')
+                return user_info
             else:
                 return []
         except Exception as e:
@@ -173,12 +174,12 @@ class Bitrix24Connector:
             if create.get('error'):
                 error_message = create.get('error_description')
                 self.send_msg_error(
-                    f"BX24.Создание !Не выполнено: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_data} {error_message}")
+                    f"BX24.Создание !Не выполнено: Сотрудник {employee.firstname, employee.lastname, employee.surname} из отдела {userData['H2'].value} на должность {userData['J2'].value}. {user_data} {error_message}")
                 return False
             if create.get('result'):
                 user_id = create.get('result')
                 self.send_msg(
-                        f"BX24.Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} ID = {user_id}. Выполнено")
+                        f"BX24.Создание: Сотрудник {employee.firstname, employee.lastname, employee.surname} ID = {user_id} {userData['H2'].value}. Выполнено")
                 return True
             else:
                 self.send_msg_error(
