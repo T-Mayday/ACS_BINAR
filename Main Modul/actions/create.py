@@ -3,7 +3,11 @@ import pandas as pd
 
 
 # подключение файла поиска
-from outher.search import user_verification
+# from outher.search import user_verification
+
+# Подключение файла для работы с Базой данных
+from connect.SQLConnect import DatabaseConnector
+sql_connector = DatabaseConnector()
 
 # подключение файла сообщений
 from message.message import log
@@ -60,7 +64,9 @@ def create_user(file_path):
     df_roles = pd.read_excel('info.xlsx')
 
     # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
+
+    # flags = user_verification(df_roles, df_users)
+    flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
@@ -246,6 +252,12 @@ def create_user(file_path):
             )
 
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
+        existence = connector.search_in_ad(INN)
+        if existence:
+            user_dn, attributes = existence[0]
+            login = attributes.get('cn', [b''])[0].decode()
+            sql_connector.record_date(employee.full_name, login, phone, userData['G2'].value, userData['J2'].value)
+
         return True
     else:
         return False

@@ -3,10 +3,14 @@ import pandas as pd
 
 
 # подключение файла поиска
-from outher.search import user_verification
+# from outher.search import user_verification
+
+# Подключение файла для работы с Базой данных
+from connect.SQLConnect import DatabaseConnector
+sql_connector = DatabaseConnector()
 
 # подключение файла сообщений
-from message.message import log
+# from message.message import log
 
 # Подключение Person
 from outher.person import Person, encrypt_inn
@@ -47,7 +51,8 @@ def blocking_user(file_path):
     df_roles = pd.read_excel('info.xlsx')
 
     # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
+    # flags = user_verification(df_roles, df_users)
+    flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)

@@ -39,6 +39,7 @@ class DatabaseConnector:
         if self.connection:
             self.connection.close()
 
+    # Поиск прав доступа
     def user_verification(self, department, position):
         flags = {
             'AD': False,
@@ -102,3 +103,25 @@ class DatabaseConnector:
         finally:
             self.connection.close()
         return flags
+
+    # Запись данных нового сотрудника для бота
+    def record_date(self, full_name, login, phone, department, position):
+        def remove_plus(phone_number: str) -> str:
+            return phone_number.replace('+', '')
+
+        phone = remove_plus(phone)
+
+        query = """INSERT INTO userinfo (full_name, login, phone, department, position)
+                   VALUES (%s, %s, %s, %s, %s)"""
+        try:
+            if not self.connection.open:
+                self.connection = self.connect()
+            with self.connection.cursor() as cursor:
+                values = (full_name, login, phone, department, position)
+                cursor.execute(query, values)
+                self.connection.commit()
+        except pymysql.MySQLError as e:
+            bitrix_connector.send_msg_error(f"Ошибка при записи данных в БД: {e}")
+        finally:
+            self.close_conn()
+

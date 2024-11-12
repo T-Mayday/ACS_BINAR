@@ -5,10 +5,11 @@ import pandas as pd
 from actions.create import create_user
 
 # подключение файла поиска
-from outher.search import user_verification
+# from outher.search import user_verification
 
-# подключение файла сообщений
-from message.message import log
+# Подключение файла для работы с Базой данных
+from connect.SQLConnect import DatabaseConnector
+sql_connector = DatabaseConnector()
 
 # Подключение Person
 from outher.person import Person, encrypt_inn
@@ -41,7 +42,8 @@ def change_user(file_path):
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
 
     # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
+    # flags = user_verification(df_roles, df_users)
+    flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
