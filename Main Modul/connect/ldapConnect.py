@@ -182,14 +182,15 @@ class ActiveDirectoryConnector:
             self.disconnect_ad(conn)
 
     # Обновление атрибутов аккаунта в Active Directory
-    def update_user(self, user, new_attr, employee, userData):
+    def update_user(self, user, new_atrr, employee, userData):
         conn = self.connect_ad()
         if not conn:
             return []
 
         user_dn, user_attrs = user[0]
         updated_attrs = []
-        for attr_name, attr_value in new_attr.items():
+
+        for attr_name, attr_value in new_atrr.items():
             if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
                 try:
@@ -199,16 +200,16 @@ class ActiveDirectoryConnector:
                     bitrix_connector.send_msg_error(
                         f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка при обновлении атрибута {attr_name}: {str(e)}"
                     )
-                    return False
+                    return False, False
         self.disconnect_ad(conn)
-        if updated_attrs:
+        if len(updated_attrs) > 0:
             updated_attrs_str = ', '.join(updated_attrs)
             bitrix_connector.send_msg(
                 f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Обновление атрибута {updated_attrs_str}. Выполнено"
             )
-            return True
+            return True, True
         else:
-            return True
+            return True, False
 
     # Блокировка аккаунта в Active Directory
     def block_user(self,user, employee, userData):

@@ -3,11 +3,11 @@ import pandas as pd
 
 
 # подключение файла поиска
-# from outher.search import user_verification
+from outher.search import user_verification
 
-# Подключение файла для работы с Базой данных
-from connect.SQLConnect import DatabaseConnector
-sql_connector = DatabaseConnector()
+# # Подключение файла для работы с Базой данных
+# from connect.SQLConnect import DatabaseConnector
+# sql_connector = DatabaseConnector()
 
 # подключение файла сообщений
 # from message.message import log
@@ -51,8 +51,8 @@ def blocking_user(file_path):
     df_roles = pd.read_excel('info.xlsx')
 
     # поиск по info.xlsx
-    # flags = user_verification(df_roles, df_users)
-    flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
+    flags = user_verification(df_roles, df_users)
+    # flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
@@ -168,67 +168,7 @@ def blocking_user(file_path):
         return False
 
 
-#
-# # # Блокировка в AD
-# # def block_ad_user(conn, user, employee, userData):
-# #         block_attr = {
-# #             'userAccountControl': b'514'
-# #         }
-# #         user_dn, user_attrs = user[0]
-# #         for attr_name, attr_value in block_attr.items():
-# #             if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
-# #                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
-# #                 try:
-# #                     conn.modify_s(user_dn, mod_attrs)
-# #                     bitrix_connector.send_msg(
-# #                         f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
-# #                     return True
-# #                 except Exception as e:
-# #                     bitrix_connector.send_msg_error(
-# #                         f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено - ошибка {str(e)}")
-# #                     return False
-# #                 finally:
-# #                     connector.disconnect_ad(conn)
-# #             else:
-# #                 return True
-# #
-# # # Блокировка в BX24
-# # def block_user_bitrix(bx24, user_id, employee, userData):
-# #         try:
-# #             bx24.refresh_tokens()
-# #             result = bx24.call('user.update', {
-# #                 'ID': user_id,
-# #                 'ACTIVE': 'N'
-# #             })
-# #             bitrix_connector.send_msg(
-# #                 f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
-# #             return True
-# #         except Exception as e:
-# #             bitrix_connector.send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
-# #             return False
-#
-#
-#
-# # Отправка в 1с
-# def send_in_1c(url, data, employee, userData):
-#         try:
-#             headers = {'Content-Type': 'application/json'}
-#             response = requests.post(url, json=data, headers=headers)
-#             if response.status_code == 200:
-#                 result = response.text
-#                 if state == '1':
-#                     bitrix_connector.send_msg(f"1C. Блокировка : {employee.lastname, employee.firstname, employee.surname} Выполнено")
-#                     return True
-#                 else:
-#                     bitrix_connector.send_msg(f"1C. Блокировка (Тест) : {employee.lastname, employee.firstname, employee.surname} Выполнено")
-#                     return False
-#             else:
-#
-#                 bitrix_connector.send_msg_error(f"1C. Блокировка. У сотрудника {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {url} {data} {response.status_code}")
-#                 return False
-#         except requests.exceptions.RequestException as e:
-#             bitrix_connector.send_msg_error(f'1C. Блокировка. У сотрудника {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Ошибка: {url} {data} {response.status_code}')
-#             return False
+
 
 
 

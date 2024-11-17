@@ -3,11 +3,11 @@ import pandas as pd
 
 
 # подключение файла поиска
-# from outher.search import user_verification
-
-# Подключение файла для работы с Базой данных
-from connect.SQLConnect import DatabaseConnector
-sql_connector = DatabaseConnector()
+from outher.search import user_verification
+#
+# # Подключение файла для работы с Базой данных
+# from connect.SQLConnect import DatabaseConnector
+# sql_connector = DatabaseConnector()
 
 # подключение файла сообщений
 from message.message import log
@@ -65,8 +65,8 @@ def create_user(file_path):
 
     # поиск по info.xlsx
 
-    # flags = user_verification(df_roles, df_users)
-    flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
+    flags = user_verification(df_roles, df_users)
+    # flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
@@ -151,7 +151,7 @@ def create_user(file_path):
                     "WORK_POSITION": userData['J2'].value
                 }
                 try:
-                    bx24_success = bitrix_connector.update_user(user_info.get('ID'), new_data, employee, userData)
+                    bx24_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
                 except Exception as e:
                     bx24_success = False
                     bitrix_connector.send_msg_error(
@@ -252,89 +252,6 @@ def create_user(file_path):
             )
 
     if ad_success and bx24_success and c1_success and sm_success and sm_local_success:
-        existence = connector.search_in_ad(INN)
-        if existence:
-            user_dn, attributes = existence[0]
-            login = attributes.get('cn', [b''])[0].decode()
-            sql_connector.record_date(employee.full_name, login, phone, userData['G2'].value, userData['J2'].value)
-
         return True
     else:
         return False
-
-
-
-#
-#
-# # Функция для создания пользователя в BX24
-# def create_in_BX24(email, bx24, employee, userData, conn):
-#         try:
-#             user_data = {
-#                 "NAME": employee.firstname,
-#                 "LAST_NAME": employee.lastname,
-#                 "SECOND_NAME": employee.surname,
-#                 "EMAIL": email,
-#                 "UF_DEPARTMENT": str(userData['H2'].value),
-#                 "ACTIVE": "Y",
-#                 "WORK_POSITION": str(userData["J2"].value),
-#             }
-#             if state == '1':
-#                 bx24.refresh_tokens()
-#                 createBX = bx24.call('user.add', user_data)
-#
-#                 if createBX.get('error'):
-#                     error_message = createBX.get('error_description')
-#                     bitrix_connector.send_msg_error(
-#                         f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. {user_data} {error_message}")
-#                     return False
-#
-#                 if createBX.get('result'):
-#                     user_id = createBX.get('result')
-#                     search_filter = f"(mail={email})"
-#                     search_base = connector.getSearchBase()
-#                     result = conn.search_s(search_base, ldap.SCOPE_SUBTREE, search_filter)
-#
-#                     if result:
-#                         user_dn, user_attrs = result[0]
-#                         attr = [(ldap.MOD_REPLACE, 'pager', str(user_id).encode('utf-8'))]
-#                     if state == "1":
-#                         conn.modify_s(user_dn, attr)
-#                     bitrix_connector.send_msg(
-#                         f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname} ID={user_id}. Выполнено")
-#                     return True
-#                 else:
-#                     bitrix_connector.send_msg_error(
-#                         f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка: {createBX.get('result')}")
-#                     return False
-#             else:
-#                 bitrix_connector.send_msg(
-#                     f"BX24. Создание (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-#                 return True
-#         except Exception as e:
-#             bitrix_connector.send_msg_error(f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка:{e}")
-#             return False
-#
-# # Отправка в 1c
-# def send_in_1c(url, data, employee, userData):
-#         try:
-#             if state == '1':
-#                 headers = {'Content-Type': 'application/json'}
-#                 response = requests.post(url, json=data, headers=headers)
-#                 if response.status_code == 200:
-#                     result = response.text
-#                     bitrix_connector.send_msg(
-#                         f"1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. {response.status_code} Выполнено")
-#                     return True
-#                 else:
-#                     result = response.text
-#                     bitrix_connector.send_msg_error(f'1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Не выполнено. Ошибки - {response.status_code} {url} {data}')
-#                     return False
-#             else:
-#                 bitrix_connector.send_msg(
-#                     f"1С. Создание: Сотрудник(Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
-#                 return True
-#         except requests.exceptions.RequestException as e:
-#             bitrix_connector.send_msg_error(f"1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка {url} {data} Error: {e}")
-#             return False
-
-# Главная функция

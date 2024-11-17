@@ -139,22 +139,29 @@ class Bitrix24Connector:
             return None
 
     # Обновление пользователя
-    def update_user(self, user_id, new_data, employee, userData):
+    def update_user(self, user_info, new_data, employee, userData):
         bx24, tokens = self.connect()
+        update_attr = []
         try:
-            bx24.refresh_tokens()
-            result = bx24.call('user.update', {'ID': user_id, **new_data})
-            if result.get('error'):
-                self.send_msg_error(
-                    f"BX24. Ошибка при изменении пользователя: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {result.get('error_description')}")
-                return False
-            if result.get('result'):
-                self.send_msg(
-                    f"BX24. Обновление данных сотрудника {employee.firstname} {employee.lastname} {employee.surname} ID = {user_id}. Выполнено.")
-                return True
+            for key in user_info.keys() & new_data.keys():
+                if user_info[key] != new_data[key]:
+                    update_attr.append((key, new_data[key]))
+                    user_id = user_info.get('ID')
+                    result = bx24.call('user.update', {'ID': user_id, **new_data})
+                    if result.get('error'):
+                        self.send_msg_error(
+                            f"BX24. Ошибка при изменении пользователя: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка: {result.get('error_description')}")
+                        return False, False
+                    if result.get('result'):
+                        self.send_msg(
+                            f"BX24. Обновление данных сотрудника {employee.firstname} {employee.lastname} {employee.surname} ID = {user_id}. Выполнено.")
+                        if len(update_attr) > 0:
+                            return True, True
+                else:
+                    return True, False
         except Exception as e:
-            self.send_msg_error(f"BX24. Ошибка при обновлении данных {user_id} {new_data} Ошибка {e}")
-            return False
+            self.send_msg_error(f"BX24. Ошибка при обновлении данных {user_info.get('ID')} {new_data} Ошибка {e}")
+            return False, False
 
     # Создания пользователя
     def create_user(self, email, employee, userData):
