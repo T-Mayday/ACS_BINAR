@@ -144,7 +144,7 @@ def change_user(file_path):
     else:
         bx_success = True
 
-    if update_status_ad and update_status_bx and flags['Normal_account']:
+    if c1_success and update_status_ad and update_status_bx and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
         user_dn, attributes = existence[0]
         mail = attributes.get('mail', [b''])[0].decode('utf-8')
@@ -169,7 +169,7 @@ def change_user(file_path):
         if c1_success:
             message += "- 1С\n" + c1_message
 
-        message += f"\nОбновленные данные:\nОтдел: {userData['G2'].value} \nДолжность: {userData['J2'].value}"
+        message += f"\nОбновленные данные в Bitrix24:\nОтдел: {userData['G2'].value} \nДолжность: {userData['J2'].value}"
 
         # Отправка сообщения сотруднику и дублирование
         try:
