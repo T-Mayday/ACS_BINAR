@@ -13,7 +13,8 @@ from outher.search import user_verification
 from message.message import log
 
 # Подключение Person
-from outher.person import Person, encrypt_inn
+from outher.person import Person
+from outher.encryption import encrypt_inn_new
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -73,12 +74,12 @@ def create_user(file_path):
     phone = userData['K2'].value if not (userData['K2'].value is None) else ''
 
     # Зашифровка ИНН
-    INN = encrypt_inn(userData['A2'].value)
+    INN = encrypt_inn_new(userData['A2'].value)
 
     # Cоздание в Active Directory
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
 
         if existence is None or len(existence) == 0:
             personal = connector.search_by_fullname(employee.full_name)
@@ -129,7 +130,7 @@ def create_user(file_path):
     # Создание в Bitrix24
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if not (existence is None) and len(existence) > 0:
             user_dn, attributes = existence[0]
             email = attributes.get('mail', [b''])[0].decode('utf-8')
@@ -164,7 +165,7 @@ def create_user(file_path):
     c1_success = True
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         action = "Создание"
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if not (existence is None) and len(existence) > 0:
             user_dn, attributes = existence[0]
             cn = attributes.get('cn', [b''])[0].decode('utf-8')
@@ -186,7 +187,7 @@ def create_user(file_path):
     # Создание в SM Глобальном
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if existence:
             user_dn, attributes = existence[0]
             login = attributes.get('sAMAccountName', [b''])[0].decode('utf-8')

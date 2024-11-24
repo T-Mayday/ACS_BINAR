@@ -13,7 +13,8 @@ from outher.search import user_verification
 # from message.message import log
 
 # Подключение Person
-from outher.person import Person, encrypt_inn
+from outher.person import Person
+from outher.encryption import encrypt_inn_new
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -58,7 +59,7 @@ def blocking_user(file_path):
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
 
     # Зашифровка ИНН
-    INN = encrypt_inn(userData['A2'].value)
+    INN = encrypt_inn_new(userData['A2'].value)
 
     # Блокировка в 1C
     c1_success = True
@@ -88,7 +89,7 @@ def blocking_user(file_path):
     # Блокировка в SM Глобальный
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if existence:
             user_dn, attributes = existence[0]
             login = attributes.get('sAMAccountName', [b''])[0].decode('utf-8')
@@ -114,7 +115,7 @@ def blocking_user(file_path):
     # Блокировка в Bitrix24
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if len(existence) > 0:
             user_dn, attributes = existence[0]
             mail = attributes.get('mail', [b''])[0].decode('utf-8')
@@ -136,7 +137,7 @@ def blocking_user(file_path):
     # Блокировка в МД АУДИТ
     md_success = True
     if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if existence:
             user_dn, attributes = existence[0]
             mail = attributes.get('mail', [b''])[0].decode('utf-8')
@@ -152,7 +153,7 @@ def blocking_user(file_path):
     # Блокировка в Active Directory
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if existence:
             if state == '1':
                 ad_success = connector.block_user(existence, employee, userData)

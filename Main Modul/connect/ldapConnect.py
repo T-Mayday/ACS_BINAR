@@ -8,6 +8,8 @@ from message.message import log
 from connect.bitrixConnect import Bitrix24Connector
 bitrix_connector = Bitrix24Connector()
 
+from outher.encryption import encrypt_inn, encrypt_inn_new
+
 class ActiveDirectoryConnector:
     #  Получение данных из ini файла
     def __init__(self):
@@ -73,14 +75,25 @@ class ActiveDirectoryConnector:
             log.error(f"AD. Ошибка при отключении от LDAP: {e}")
 
     # Поиск по атрибуту (EmployyID)
-    def search_in_ad(self, INN):
+    def search_in_ad(self, INN, number):
         conn = self.connect_ad()
         if not conn:
             return []
         search_filter = f"(employeeID={escape_filter_chars(INN)})"
         try:
             result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
-            return result
+            if len(result) > 0:
+                return result
+            else:
+                INN = encrypt_inn(number)
+                new_INN = encrypt_inn_new(number)
+                search_filter = f"(employeeID={escape_filter_chars(INN)})"
+                result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
+                user_dn, user_attrs = result[0]
+                if user_dn:
+                    mod_attrs = [(ldap.MOD_REPLACE, 'employeeID', new_INN.encode('utf-8'))]
+                    conn.modify_s(user_dn, mod_attrs)
+                return result
         except Exception as e:
             bitrix_connector.send_msg_error(f'LDAP Ошибка поиcка по INN: {search_filter} {str(e)} ')
             return []
@@ -145,7 +158,7 @@ class ActiveDirectoryConnector:
                 ('pwdLastSet', [b'0'])
             ]
             conn.add_s(user_dn, attrs)
-            created = self.search_in_ad(INN)
+            created = self.search_in_ad(INN, userData['A2'].value)
             if created is not None and len(created) != 0:
                 bitrix_connector.send_msg_adm(
                     f"{employee.lastname, employee.firstname, employee.surname} {user_dn} {employee.password}")

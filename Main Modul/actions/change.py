@@ -12,7 +12,8 @@ from outher.search import user_verification
 # sql_connector = DatabaseConnector()
 
 # Подключение Person
-from outher.person import Person, encrypt_inn
+from outher.person import Person
+from outher.encryption import encrypt_inn_new
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -46,7 +47,7 @@ def change_user(file_path):
     # flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Зашифровка ИНН
-    INN = encrypt_inn(userData['A2'].value)
+    INN = encrypt_inn_new(userData['A2'].value)
 
     # Новые данные
     name_atrr = {
@@ -71,7 +72,7 @@ def change_user(file_path):
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         action = "Изменение"
 
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if not (existence is None) and len(existence) > 0:
             user_dn, attributes = existence[0]
             cn = attributes.get('cn', [b''])[0].decode('utf-8')
@@ -96,7 +97,7 @@ def change_user(file_path):
     ad_success = False
     update_status_ad = False
     if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if existence:
             if state == '1':
                 try:
@@ -116,7 +117,7 @@ def change_user(file_path):
     bx_success = False
     update_status_bx = False
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         if existence:
             user_dn, attributes = existence[0]
             mail = attributes.get('mail', [b''])[0].decode('utf-8')
@@ -145,7 +146,7 @@ def change_user(file_path):
         bx_success = True
 
     if c1_success and update_status_ad and update_status_bx and flags['Normal_account']:
-        existence = connector.search_in_ad(INN)
+        existence = connector.search_in_ad(INN, userData['A2'].value)
         user_dn, attributes = existence[0]
         mail = attributes.get('mail', [b''])[0].decode('utf-8')
         user_info = bitrix_connector.search_email(mail)
