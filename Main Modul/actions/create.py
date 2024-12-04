@@ -4,17 +4,12 @@ import pandas as pd
 
 # подключение файла поиска
 from outher.search import user_verification
-#
-# # Подключение файла для работы с Базой данных
-# from connect.SQLConnect import DatabaseConnector
-# sql_connector = DatabaseConnector()
 
 # подключение файла сообщений
 from message.message import log
 
 # Подключение Person
-from outher.person import Person
-from outher.encryption import encrypt_inn_new
+from outher.person import Person, encrypt_inn
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -35,11 +30,6 @@ name_domain = connector.domain_name
 
 # Подключение к SM
 from connect.SMConnect import SMConnect
-sm_conn = SMConnect()
-sm_conn.connect_SM()
-test_role_id = sm_conn.getRoleID()
-
-
 
 # Функция записи логина и пароля
 def save_login(phone_number, full_name, login):
@@ -62,24 +52,23 @@ def create_user(file_path):
     userData = load_workbook(file_path).active
 
     df_users = pd.read_excel(file_path)
-    df_roles = pd.read_excel('info.xlsx')
+#    df_roles = pd.read_excel('info.xlsx')
+    df_roles = pd.read_excel(connector.dbinfo)
 
     # поиск по info.xlsx
-
     flags = user_verification(df_roles, df_users)
-    # flags = sql_connector.user_verification(userData['G2'].value, userData['J2'].value)
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
     phone = userData['K2'].value if not (userData['K2'].value is None) else ''
 
     # Зашифровка ИНН
-    INN = encrypt_inn_new(userData['A2'].value)
+    INN = encrypt_inn(userData['A2'].value)
 
     # Cоздание в Active Directory
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN, userData['A2'].value)
+        existence = connector.search_in_ad(INN)
 
         if existence is None or len(existence) == 0:
             personal = connector.search_by_fullname(employee.full_name)
@@ -130,7 +119,7 @@ def create_user(file_path):
     # Создание в Bitrix24
     bx24_success = True
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN, userData['A2'].value)
+        existence = connector.search_in_ad(INN)
         if not (existence is None) and len(existence) > 0:
             user_dn, attributes = existence[0]
             email = attributes.get('mail', [b''])[0].decode('utf-8')
@@ -152,7 +141,7 @@ def create_user(file_path):
                     "WORK_POSITION": userData['J2'].value
                 }
                 try:
-                    bx24_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
+                    bx24_success = bitrix_connector.update_user(user_info.get('ID'), new_data, employee, userData)
                 except Exception as e:
                     bx24_success = False
                     bitrix_connector.send_msg_error(
@@ -165,7 +154,7 @@ def create_user(file_path):
     c1_success = True
     if flags['ZUP'] or flags['RTL'] or flags['ERP'] and flags['Normal_account']:
         action = "Создание"
-        existence = connector.search_in_ad(INN, userData['A2'].value)
+        existence = connector.search_in_ad(INN)
         if not (existence is None) and len(existence) > 0:
             user_dn, attributes = existence[0]
             cn = attributes.get('cn', [b''])[0].decode('utf-8')
@@ -187,11 +176,14 @@ def create_user(file_path):
     # Создание в SM Глобальном
     sm_success = True
     if flags['SM_GEN'] and flags['Normal_account']:
-        existence = connector.search_in_ad(INN, userData['A2'].value)
+        existence = connector.search_in_ad(INN)
         if existence:
             user_dn, attributes = existence[0]
             login = attributes.get('sAMAccountName', [b''])[0].decode('utf-8')
             sm_login = employee.transform_login(login)
+            sm_conn = SMConnect()
+            sm_conn.connect_SM()
+            test_role_id = sm_conn.getRoleID()
             user_not_exists = sm_conn.user_exists(sm_login) == -1
             if user_not_exists:
                 try:
@@ -228,6 +220,7 @@ def create_user(file_path):
 
     store_names = get_storeId()
 
+    sm_local_success = True
     if flags['SM_LOCAL'] and store_names:
         existence = connector.search_in_ad(INN)
         created_databases = []
@@ -236,15 +229,29 @@ def create_user(file_path):
         sm_login = employee.transform_login(login)
 
         for dbname in store_names:
-            success = sm_conn.create_user_in_local_db(dbname, sm_login, employee.password, test_role_id)
-            sm_local_success = sm_local_success and success
-            if success:
-                created_databases.append(dbname)
-            else:
-                bitrix_connector.send_msg_error(
-                    f"СуперМаг Локальный. Ошибка при создании аккаунта для {employee.lastname} {employee.firstname} {employee.surname} в базе {dbname}"
-                )
+            sm_conn = SMConnect()
+            sm_conn.connect_SM_LOCAL(dbname['dbname'])
+            test_role_id = sm_conn.getRoleID()
 
+            user_not_exists = sm_conn.user_exists(sm_login) == -1
+            if user_not_exists:
+                try:
+                    success = sm_conn.create_user_in_local_db(dbname, sm_login, employee.password, test_role_id)
+                    sm_local_success = sm_local_success and success
+                    if success:
+                        created_databases.append(dbname)
+                    else:
+                        bitrix_connector.send_msg_error(
+                            f"СуперМаг Локальный. Ошибка при создании аккаунта для {employee.lastname} {employee.firstname} {employee.surname} в базе {dbname['dbname']}"
+                        )
+                except Exception as e:
+                    sm_local_success = False
+                    bitrix_connector.send_msg_error(
+                            f"СуперМаг Локальный. Ошибка при создании аккаунта для {employee.lastname} {employee.firstname} {employee.surname} в базе {dbname['dbname']}"
+                        )
+            else:
+                bitrix_connector.send_msg(
+                    f"СуперМаг Локальный. Создание: У сотрудника {employee.firstname} {employee.lastname} {employee.surname} в базе {dbname['dbname']} логин {sm_login} уже существует.")
         if created_databases:
             bitrix_connector.send_msg(
                 f"СуперМаг Локальный. Создание: Сотруднику {employee.lastname} {employee.firstname} {employee.surname} "
@@ -256,3 +263,80 @@ def create_user(file_path):
         return True
     else:
         return False
+
+
+
+#
+#
+# # Функция для создания пользователя в BX24
+# def create_in_BX24(email, bx24, employee, userData, conn):
+#         try:
+#             user_data = {
+#                 "NAME": employee.firstname,
+#                 "LAST_NAME": employee.lastname,
+#                 "SECOND_NAME": employee.surname,
+#                 "EMAIL": email,
+#                 "UF_DEPARTMENT": str(userData['H2'].value),
+#                 "ACTIVE": "Y",
+#                 "WORK_POSITION": str(userData["J2"].value),
+#             }
+#             if state == '1':
+#                 bx24.refresh_tokens()
+#                 createBX = bx24.call('user.add', user_data)
+#
+#                 if createBX.get('error'):
+#                     error_message = createBX.get('error_description')
+#                     bitrix_connector.send_msg_error(
+#                         f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. {user_data} {error_message}")
+#                     return False
+#
+#                 if createBX.get('result'):
+#                     user_id = createBX.get('result')
+#                     search_filter = f"(mail={email})"
+#                     search_base = connector.getSearchBase()
+#                     result = conn.search_s(search_base, ldap.SCOPE_SUBTREE, search_filter)
+#
+#                     if result:
+#                         user_dn, user_attrs = result[0]
+#                         attr = [(ldap.MOD_REPLACE, 'pager', str(user_id).encode('utf-8'))]
+#                     if state == "1":
+#                         conn.modify_s(user_dn, attr)
+#                     bitrix_connector.send_msg(
+#                         f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname} ID={user_id}. Выполнено")
+#                     return True
+#                 else:
+#                     bitrix_connector.send_msg_error(
+#                         f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка: {createBX.get('result')}")
+#                     return False
+#             else:
+#                 bitrix_connector.send_msg(
+#                     f"BX24. Создание (Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+#                 return True
+#         except Exception as e:
+#             bitrix_connector.send_msg_error(f"BX24. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка:{e}")
+#             return False
+#
+# # Отправка в 1c
+# def send_in_1c(url, data, employee, userData):
+#         try:
+#             if state == '1':
+#                 headers = {'Content-Type': 'application/json'}
+#                 response = requests.post(url, json=data, headers=headers)
+#                 if response.status_code == 200:
+#                     result = response.text
+#                     bitrix_connector.send_msg(
+#                         f"1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. {response.status_code} Выполнено")
+#                     return True
+#                 else:
+#                     result = response.text
+#                     bitrix_connector.send_msg_error(f'1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname} из отдела {userData["G2"].value} на должность {userData["J2"].value}. Не выполнено. Ошибки - {response.status_code} {url} {data}')
+#                     return False
+#             else:
+#                 bitrix_connector.send_msg(
+#                     f"1С. Создание: Сотрудник(Тест): Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
+#                 return True
+#         except requests.exceptions.RequestException as e:
+#             bitrix_connector.send_msg_error(f"1С. Создание: Сотрудник {employee.lastname, employee.firstname, employee.surname}. Ошибка {url} {data} Error: {e}")
+#             return False
+
+# Главная функция

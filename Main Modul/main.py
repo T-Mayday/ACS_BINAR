@@ -122,7 +122,7 @@ def process_file(file_path):
         errors, user_data = validate_user_data(workbook)
         if errors:
             move_file(file_path,error_dir)
-            bitrix_connector.send_msg(f"Ошибки валидации: {', '.join(errors)}")
+            bitrix_connector.send_msg(f"{file_path} Ошибки валидации: {', '.join(errors)}")
 
         action = user_data.get("status")
 
@@ -156,7 +156,7 @@ def process_file(file_path):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.27.11.2024'
+    ver = 'V.04.12.2024'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'

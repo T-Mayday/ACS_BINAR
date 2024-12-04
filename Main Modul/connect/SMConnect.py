@@ -28,8 +28,8 @@ class SMConnect:
 
     def connect_SM_LOCAL(self, service_name):
         try:
-            dsn = cx_Oracle.makedsn(service_name)
-            self.connection = cx_Oracle.connect(self.username, self.password, dsn)
+            #dsn = cx_Oracle.makedsn(service_name)
+            self.connection = cx_Oracle.connect(self.username, self.password, service_name)
             self.cursor = self.connection.cursor()
         except cx_Oracle.DatabaseError as e:
             bitrix_connector.send_msg_error(f"SM LOCAL: Ошибка подключения: {e}")
@@ -171,9 +171,9 @@ class SMConnect:
 
     def create_user_in_local_db(self, dbname, user_login, user_password, user_role):
         """Создание пользователя в локальной базе данных."""
-        local_dsn = cx_Oracle.makedsn('localhost', '1521', service_name=dbname)
+#        local_dsn = cx_Oracle.makedsn('localhost', '1521', service_name=dbname['dbname'])
         try:
-            local_connection = cx_Oracle.connect(self.username, self.password, local_dsn)
+            local_connection = cx_Oracle.connect(self.username, self.password, dbname['dbname'])
             with local_connection.cursor() as cursor:
                 cursor.execute("""
                     DECLARE
@@ -186,10 +186,10 @@ class SMConnect:
                 """, user_login=user_login, user_password=user_password, user_role=user_role)
 
                 local_connection.commit()
-                log.info(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname} успешно создан")
+                log.info(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname['dbname']} успешно создан")
                 return True
         except Exception as e:
-            bitrix_connector.send_msg_error(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname}. Не удалось создать, ошибка: {e}")
+            bitrix_connector.send_msg_error(f"SM LOCAL: Пользователь {user_login} в базе данных {dbname['dbname']}. Не удалось создать, ошибка: {e}")
             return False
         finally:
             if local_connection:

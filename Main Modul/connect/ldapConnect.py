@@ -8,8 +8,6 @@ from message.message import log
 from connect.bitrixConnect import Bitrix24Connector
 bitrix_connector = Bitrix24Connector()
 
-from outher.encryption import encrypt_inn, encrypt_inn_new
-
 class ActiveDirectoryConnector:
     #  Получение данных из ini файла
     def __init__(self):
@@ -29,6 +27,7 @@ class ActiveDirectoryConnector:
         self.dir_output = self.config.get('Domain', 'output')
         self.dir_waste = self.config.get('Domain', 'waste')
         self.dir_error = self.config.get('Domain', 'error')
+        self.dbinfo = self.config.get('Domain', 'dbinfo')
 
     def getBaseDn(self):
         return self.base_dn
@@ -75,25 +74,14 @@ class ActiveDirectoryConnector:
             log.error(f"AD. Ошибка при отключении от LDAP: {e}")
 
     # Поиск по атрибуту (EmployyID)
-    def search_in_ad(self, INN, number):
+    def search_in_ad(self, INN):
         conn = self.connect_ad()
         if not conn:
             return []
         search_filter = f"(employeeID={escape_filter_chars(INN)})"
         try:
             result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
-            if len(result) > 0:
-                return result
-            else:
-                INN = encrypt_inn(number)
-                new_INN = encrypt_inn_new(number)
-                search_filter = f"(employeeID={escape_filter_chars(INN)})"
-                result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
-                user_dn, user_attrs = result[0]
-                if user_dn:
-                    mod_attrs = [(ldap.MOD_REPLACE, 'employeeID', new_INN.encode('utf-8'))]
-                    conn.modify_s(user_dn, mod_attrs)
-                return result
+            return result
         except Exception as e:
             bitrix_connector.send_msg_error(f'LDAP Ошибка поиcка по INN: {search_filter} {str(e)} ')
             return []
@@ -158,7 +146,7 @@ class ActiveDirectoryConnector:
                 ('pwdLastSet', [b'0'])
             ]
             conn.add_s(user_dn, attrs)
-            created = self.search_in_ad(INN, userData['A2'].value)
+            created = self.search_in_ad(INN)
             if created is not None and len(created) != 0:
                 bitrix_connector.send_msg_adm(
                     f"{employee.lastname, employee.firstname, employee.surname} {user_dn} {employee.password}")
@@ -185,7 +173,7 @@ class ActiveDirectoryConnector:
             mod_attrs = [(ldap.MOD_REPLACE, 'userAccountControl', b'512')]
             conn.modify_s(user_dn, mod_attrs)
             bitrix_connector.send_msg(
-                f"AD. Активация: Учетная запись сотрудника {employee.firstname} {employee.lastname} {employee.surname} была успешно активирована.")
+                f"AD. Активация: Учетная запись сотрудника {employee.firstname} {employee.lastname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}: {str(user_dn)} была успешно активирована.")
             return True
         except Exception as e:
             bitrix_connector.send_msg_error(
@@ -195,15 +183,14 @@ class ActiveDirectoryConnector:
             self.disconnect_ad(conn)
 
     # Обновление атрибутов аккаунта в Active Directory
-    def update_user(self, user, new_atrr, employee, userData):
+    def update_user(self, user, new_attr, employee, userData):
         conn = self.connect_ad()
         if not conn:
             return []
 
         user_dn, user_attrs = user[0]
         updated_attrs = []
-
-        for attr_name, attr_value in new_atrr.items():
+        for attr_name, attr_value in new_attr.items():
             if attr_name in user_attrs and user_attrs[attr_name][0] != attr_value:
                 mod_attrs = [(ldap.MOD_REPLACE, attr_name, attr_value)]
                 try:
@@ -213,16 +200,16 @@ class ActiveDirectoryConnector:
                     bitrix_connector.send_msg_error(
                         f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено. Ошибка при обновлении атрибута {attr_name}: {str(e)}"
                     )
-                    return False, False
+                    return False
         self.disconnect_ad(conn)
-        if len(updated_attrs) > 0:
+        if updated_attrs:
             updated_attrs_str = ', '.join(updated_attrs)
             bitrix_connector.send_msg(
                 f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Обновление атрибута {updated_attrs_str}. Выполнено"
             )
-            return True, True
+            return True
         else:
-            return True, False
+            return True
 
     # Блокировка аккаунта в Active Directory
     def block_user(self,user, employee, userData):
@@ -246,11 +233,11 @@ class ActiveDirectoryConnector:
                 try:
                     conn.modify_s(user_dn, mod_attrs)
                     bitrix_connector.send_msg(
-                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Выполнено")
+                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_dn}. Выполнено")
                     return True
                 except Exception as e:
                     bitrix_connector.send_msg_error(
-                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Не выполнено - ошибка {str(e)}")
+                        f"AD. Блокировка: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value} {user_dn}. Не выполнено - ошибка {str(e)}")
                     return False
         self.disconnect_ad(conn)
 

@@ -29,6 +29,11 @@ class Connector1C:
                 bitrix_connector.send_msg(
                     f"1С. {action}. Сотрудник {employee.lastname, employee.firstname, employee.surname}. Выполнено")
                 return True
+            elif response.status_code == 500:
+                bitrix_connector.send_msg(
+                    f"1С. {action}. Сотрудник {employee.lastname, employee.firstname, employee.surname}.  Уже зарегистрирован")
+                return True
+
             else:
                 result = response.text
                 bitrix_connector.send_msg_error(

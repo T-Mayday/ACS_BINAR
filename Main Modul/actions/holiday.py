@@ -14,11 +14,6 @@ state = connector.getState()
 # подключение файла поиска
 from outher.search import user_verification
 
-# Подключение файла для работы с Базой данных
-from connect.SQLConnect import DatabaseConnector
-sql_connector = DatabaseConnector()
-
-
 # Подключение файла сообщения
 from message.message import log
 
@@ -64,12 +59,10 @@ def holiday(file_path):
 
     excel_data = load_workbook(file_path).active
     df_users = pd.read_excel(file_path)
-    df_roles = pd.read_excel('info.xlsx')
+    df_roles = pd.read_excel(connector.dbinfo)
 
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
-
-    # flags = sql_connector.user_verification(excel_data['G2'].value, excel_data['J2'].value)
     random_string = generate_random_string()
 
     def format_date(date):
