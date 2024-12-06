@@ -1,5 +1,6 @@
 import random
 import string
+import secrets
 
 # Подключение ldapConnect
 from connect.ldapConnect import ActiveDirectoryConnector
@@ -36,7 +37,6 @@ class Person:
         self.sm_login = self.create_sm_login()
         self.sm_login_login = self.create_sm_long_login()
         self.sm_full_login = self.create_sm_full_login()
-#        self.password = self.generate_password(12)
         self.password = self.generate_password(8)
         self.full_name = self.full_name()
 
@@ -103,11 +103,30 @@ class Person:
         return None
 
     def generate_password(self, length):
-        lower = random.choice(string.ascii_lowercase)
-        upper = random.choice(string.ascii_uppercase)
-        digit = random.choice(string.digits)
-        all_characters = '!'+lower + upper + digit + ''.join(random.choices(string.ascii_letters + string.digits, k=length - 3))
-        return ''.join(random.sample(all_characters, len(all_characters)))
+        lowercase = ''.join([c for c in string.ascii_lowercase if c not in ['l', 'i']])
+        uppercase = ''.join([c for c in string.ascii_uppercase if c not in ['L', 'I', 'O']])
+        digits = ''.join([c for c in string.digits if c not in ['0', '1']])
+        special_characters = '!@#$%^&*()-_=+'
+
+        if length < 4:
+            raise ValueError("Длина пароля должна быть как минимум 4 символа.")
+
+
+        lower = secrets.choice(lowercase)
+        upper = secrets.choice(uppercase)
+        digit = secrets.choice(digits)
+        special = secrets.choice(special_characters)
+
+        all_characters = lowercase + uppercase + digits + special_characters
+        remaining_length = length - 4
+        remaining_chars = ''.join(secrets.choice(all_characters) for _ in range(remaining_length))
+
+
+        password_list = list(lower + upper + digit + special + remaining_chars)
+        secrets.SystemRandom().shuffle(password_list)
+        password = ''.join(password_list)
+
+        return password
 
     def transform_login(self, login):
         parts = login.split(".")

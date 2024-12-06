@@ -79,6 +79,7 @@ class ActiveDirectoryConnector:
         if not conn:
             return []
         search_filter = f"(employeeID={escape_filter_chars(INN)})"
+        
         try:
             result = conn.search_s(self.base_dn, ldap.SCOPE_SUBTREE, search_filter)
             return result

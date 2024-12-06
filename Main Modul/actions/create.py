@@ -9,7 +9,8 @@ from outher.search import user_verification
 from message.message import log
 
 # Подключение Person
-from outher.person import Person, encrypt_inn
+from outher.person import Person
+from outher.encryption import encrypt_inn
 
 # Подключение BitrixConnect
 from connect.bitrixConnect import Bitrix24Connector
@@ -52,7 +53,6 @@ def create_user(file_path):
     userData = load_workbook(file_path).active
 
     df_users = pd.read_excel(file_path)
-#    df_roles = pd.read_excel('info.xlsx')
     df_roles = pd.read_excel(connector.dbinfo)
 
     # поиск по info.xlsx
