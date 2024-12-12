@@ -136,7 +136,7 @@ def change_user(file_path):
             user_info = bitrix_connector.search_email(mail)
             if user_info:
                 if state == '1':
-                    bx_success = bitrix_connector.update_user(user_info.get('ID'), new_data, employee, userData)
+                    bx_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
@@ -144,7 +144,7 @@ def change_user(file_path):
             user_info = bitrix_connector.search_user(employee.lastname, employee.firstname, employee.surname)
             if user_info:
                 if state == '1':
-                    bx_success = bitrix_connector.update_user(user_info.get('ID'), new_data, employee, userData)
+                    bx_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
@@ -153,8 +153,8 @@ def change_user(file_path):
                     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
     else:
         bx_success = True
-    
-    if ad_success and bx_success and c1_success and flags['Normal_account']:
+
+    if update_status_bx and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
         if existence:
             user_dn, attributes = existence[0]
@@ -175,8 +175,6 @@ def change_user(file_path):
             # Основное сообщение
             message = "Здравствуйте, ваши данные в системе были успешно обновлены в следующих системах:\n"
 
-            if ad_success:
-                message += "- Active Directory\n"
             if bx_success:
                 message += "- Bitrix24\n"
             if c1_success:
@@ -196,6 +194,9 @@ def change_user(file_path):
                 error_message = f"Ошибка при отправке уведомления сотруднику {employee.lastname} {employee.firstname}: {e}"
                 bitrix_connector.send_msg_error(error_message)
 
+
+    
+    if ad_success and bx_success and c1_success and flags['Normal_account']:
         return True
     else:
         return ad_success and bx_success and c1_success

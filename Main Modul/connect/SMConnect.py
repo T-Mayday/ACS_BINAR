@@ -115,7 +115,6 @@ class SMConnect:
             return True
         except cx_Oracle.DatabaseError as e:
             bitrix_connector.send_msg_error(f"SM Блокировка: {login}. Ошибка {e}")
-#            raise
             return False
 
     def unblock_user(self, login):
@@ -171,7 +170,6 @@ class SMConnect:
 
     def create_user_in_local_db(self, dbname, user_login, user_password, user_role):
         """Создание пользователя в локальной базе данных."""
-#        local_dsn = cx_Oracle.makedsn('localhost', '1521', service_name=dbname['dbname'])
         try:
             local_connection = cx_Oracle.connect(self.username, self.password, dbname['dbname'])
             with local_connection.cursor() as cursor:
