@@ -139,7 +139,8 @@ def create_user(file_path):
                     "WORK_POSITION": userData['J2'].value
                 }
                 try:
-                    bx24_success = bitrix_connector.update_user(user_info.get('ID'), new_data, employee, userData)
+#                    bx24_success = bitrix_connector.update_user(user_info.get('ID'), new_data, employee, userData)
+                    bx24_success, update_status_bx  = bitrix_connector.update_user(user_info, new_data, employee, userData)
                 except Exception as e:
                     bx24_success = False
                     bitrix_connector.send_msg_error(
@@ -213,8 +214,9 @@ def create_user(file_path):
             return store_names
         return []
 
+    sm_conn = SMConnect()
+    sm_conn.connect_SM()
     store_names = get_storeId()
-
     sm_local_success = True
     if flags['SM_LOCAL'] and store_names:
         existence = connector.search_in_ad(INN)
@@ -223,15 +225,16 @@ def create_user(file_path):
         login = attributes.get('sAMAccountName', [b''])[0].decode('utf-8')
         sm_login = employee.transform_login(login)
 
-        for dbname in store_names:
-            sm_conn = SMConnect()
-            sm_conn.connect_SM_LOCAL(dbname['dbname'])
-            test_role_id = sm_conn.getRoleID()
 
-            user_not_exists = sm_conn.user_exists(sm_login) == -1
+        for dbname in store_names:
+            sm_conn_local = SMConnect()
+            sm_conn_local.connect_SM_LOCAL(dbname['dbname'])
+            test_role_id = sm_conn_local.getRoleID()
+
+            user_not_exists = sm_conn_local.user_exists(sm_login) == -1
             if user_not_exists:
                 try:
-                    success = sm_conn.create_user_in_local_db(dbname, sm_login, employee.password, test_role_id)
+                    success = sm_conn_local.create_user_in_local_db(dbname, sm_login, employee.password, test_role_id)
                     sm_local_success = sm_local_success and success
                     if success:
                         created_databases.append(dbname)
