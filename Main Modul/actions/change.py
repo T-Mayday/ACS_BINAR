@@ -127,6 +127,7 @@ def change_user(file_path):
 
     # Изменение в Bitrix24
     bx_success = False
+    update_status_bx = False
     if flags['AD'] and flags['BX24'] and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
         if existence:
@@ -153,6 +154,7 @@ def change_user(file_path):
                     f"BX24. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} не найден.")
     else:
         bx_success = True
+        update_status_bx = False
 
     if update_status_bx and flags['Normal_account']:
         existence = connector.search_in_ad(INN)
