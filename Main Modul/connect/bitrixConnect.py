@@ -19,7 +19,8 @@ class Bitrix24Connector:
         self.clientId = self.config.get('Bitrix24', 'clientId')
         self.clientSecret = self.config.get('Bitrix24', 'clientSecret')
         self.chatID = self.config.get('Bitrix24', 'chatID')
-        self.chatadmID = self.config.get('Bitrix24', 'chatadmID')
+        self.chatadmID1 = self.config.get('Bitrix24', 'chatadmID1')
+        self.chatadmID2 = self.config.get('Bitrix24', 'chatadmID2')
     def getChatID(self):
         return self.chatID
 
@@ -65,7 +66,8 @@ class Bitrix24Connector:
         try:
             log.info(msg)
             bx24.refresh_tokens()
-            res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
+            res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID1, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
+            res = bx24.call('im.message.add', {'DIALOG_ID': self.chatadmID2, 'MESSAGE': msg, 'URL_PREVIEW': 'N'})
         except Exception as e:
             log.exception("Error sending message", e)
 
