@@ -27,8 +27,8 @@ COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
-# Копируем папку Main Modul в /app/Main Modul
-COPY Main Modul /app/Main Modul 
+# Копируем папку Main_Modul в /app/Main_Modul
+COPY Main_Modul /app/Main_Modul 
 
-# Запускаем main.py, который лежит в Main Modul
-CMD ["python", "Main Modul/main.py"]
+# Запускаем main.py, который лежит в Main_Modul
+CMD ["python", "Main_Modul/main.py"]
