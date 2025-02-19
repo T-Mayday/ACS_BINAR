@@ -211,6 +211,11 @@ class Bitrix24Connector:
                 'ID': user_id,
                 'ACTIVE': 'N'
             })
+            if result.get('error'):
+                self.send_msg_error(
+                    f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка")
+                return False
+
             self.send_msg(
                 f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} {user_id}. Выполнено")
             return True
