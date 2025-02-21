@@ -19,6 +19,7 @@ RUN wget https://download.oracle.com/otn_software/linux/instantclient/2370000/in
 #ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_7:${LD_LIBRARY_PATH:-}
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_7
 ENV ORACLE_HOME=/opt/oracle/instantclient_23_7
+ENV TZ="Asia/Irkutsk"
 
 # Переходим в /app
 WORKDIR /app

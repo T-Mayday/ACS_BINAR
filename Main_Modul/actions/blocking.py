@@ -57,6 +57,7 @@ def blocking_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
+    bitrix_connector.send_msg(str(flags))
     # Блокировка в 1C
     c1_success = True
     if (flags['ZUP'] or flags['RTL'] or flags['ERP']) and flags['Normal_account']:

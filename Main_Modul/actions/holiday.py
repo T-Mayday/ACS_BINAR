@@ -64,6 +64,7 @@ def holiday(file_path):
     # поиск по info.xlsx
     flags = user_verification(df_roles, df_users)
     random_string = generate_random_string()
+    bitrix_connector.send_msg(str(flags))
 
     def format_date(date):
         if isinstance(date, datetime):
@@ -92,7 +93,7 @@ def holiday(file_path):
         'командировка': '334',
         'больничный': '336',
         'декретный': '338',
-        'за свой счет': '340',
+        'отпуск за свой счет': '340',
         'другое': '342'
     }
     # Виды сообщений
@@ -101,7 +102,7 @@ def holiday(file_path):
         'командировка': f'Здравствуйте, Ваша командировка зарегистрирована в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
         'больничный': f'Здравствуйте, Ваш больничный зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
         'декретный': f'Здравствуйте, Ваш декретный отпуск зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
-        'за свой счет': f'Здравствуйте, Ваш отпуск за свой счет зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
+        'отпуск за свой счет': f'Здравствуйте, Ваш отпуск за свой счет зарегистрирован в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.',
         'другое': f'Здравствуйте, Ваше отсутствие зарегистрировано в Графике отсутствия. \n\nДаты: с {start_holiday} по {end_holiday}.'
     }
 
@@ -146,6 +147,8 @@ def holiday(file_path):
                         except Exception as e:
                             bx24_success = False
                             bitrix_connector.send_msg_error(f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: {str(e)} {date}")
+                else:
+                    bitrix_connector.send_msg_error(f"BX24. {state_holiday.upper()}: Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value} Ошибка: Не найден тип отстуствия в Битрикс24")
             else:
                 bitrix_connector.send_msg(
                     f"BX24. {state_holiday.upper()} (Тест): Сотрудник {lastname, firstname, surname}, должность {excel_data['J2'].value}. Выполнено")

@@ -65,6 +65,7 @@ def create_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
+    bitrix_connector.send_msg(str(flags))
     # Cоздание в Active Directory
     ad_success = True
     if flags['AD'] and flags['Normal_account']:
@@ -134,7 +135,8 @@ def create_user(file_path):
                 new_data = {
                     "NAME": userData['C2'].value,
                     "LAST_NAME": userData['B2'].value,
-                    "UF_DEPARTMENT": userData['H2'].value,
+#                    "UF_DEPARTMENT": userData['H2'].value,
+                    "UF_DEPARTMENT": "920",
                     "ACTIVE": "Y",
                     "WORK_POSITION": userData['J2'].value
                 }

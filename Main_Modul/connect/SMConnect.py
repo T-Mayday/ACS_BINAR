@@ -8,14 +8,18 @@ bitrix_connector = Bitrix24Connector()
 
 class SMConnect:
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('connect_domain.ini')
-        self.service_name = self.config['SM']['service_name']
-        self.username = self.config['SM']['username']
-        self.password = self.config['SM']['password']
-        self.role_id = self.config['SM']['role_id']
-        self.connection = None
-        self.cursor = None
+        try:
+            self.config = configparser.ConfigParser()
+            self.config.read('connect_domain.ini')
+            self.service_name = self.config['SM']['service_name']
+            self.username = self.config['SM']['username']
+            self.password = self.config['SM']['password']
+            self.role_id = self.config['SM']['role_id']
+            self.connection = None
+            self.cursor = None
+        except Exception as e:
+            log.exception("Error read config", e)
+
 
     def connect_SM(self):
         try:

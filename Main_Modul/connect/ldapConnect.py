@@ -11,23 +11,26 @@ bitrix_connector = Bitrix24Connector()
 class ActiveDirectoryConnector:
     #  Получение данных из ini файла
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('connect_domain.ini')
-        self.domain_name = self.config.get('Domain', 'domain_name')
-        self.ip = self.config.get('Domain', 'ip')
-        self.username = self.config.get('Domain', 'username')
-        self.password = self.config.get('Domain', 'password')
-        self.state = self.config.get('Domain', 'state')
-        self.base_dn = self.config.get('Domain', 'base_dn')
-        self.dn = self.config.get( 'Domain', 'dn')
-        self.newuser_dn = self.config.get( 'Domain', 'newuser_dn')
-        self.search_base = self.config.get( 'Domain', 'search_base')
-        self.adress = self.config.get('Domain', 'address')
-        self.dir_input = self.config.get('Domain', 'input')
-        self.dir_output = self.config.get('Domain', 'output')
-        self.dir_waste = self.config.get('Domain', 'waste')
-        self.dir_error = self.config.get('Domain', 'error')
-        self.dbinfo = self.config.get('Domain', 'dbinfo')
+        try:
+            self.config = configparser.ConfigParser()
+            self.config.read('connect_domain.ini')
+            self.domain_name = self.config.get('Domain', 'domain_name')
+            self.ip = self.config.get('Domain', 'ip')
+            self.username = self.config.get('Domain', 'username')
+            self.password = self.config.get('Domain', 'password')
+            self.state = self.config.get('Domain', 'state')
+            self.base_dn = self.config.get('Domain', 'base_dn')
+            self.dn = self.config.get( 'Domain', 'dn')
+            self.newuser_dn = self.config.get( 'Domain', 'newuser_dn')
+            self.search_base = self.config.get( 'Domain', 'search_base')
+            self.adress = self.config.get('Domain', 'address')
+            self.dir_input = self.config.get('Domain', 'input')
+            self.dir_output = self.config.get('Domain', 'output')
+            self.dir_waste = self.config.get('Domain', 'waste')
+            self.dir_error = self.config.get('Domain', 'error')
+            self.dbinfo = self.config.get('Domain', 'dbinfo')
+        except Exception as e:
+            log.exception("Error read config", e)
 
     def getBaseDn(self):
         return self.base_dn

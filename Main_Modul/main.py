@@ -4,6 +4,26 @@ import shutil
 import time
 from datetime import datetime
 from openpyxl import load_workbook
+from os import listdir
+from os.path import isfile, join
+
+# Подключение файла сообщения
+from message.message import log
+
+print('START')
+log.info('START')
+
+#try:
+#    my_files = [f for f in listdir("/app")]
+#    print(my_files)
+#    my_files = [f for f in listdir("/app/Main_Modul")]
+#    print(my_files)
+#    with open('connect_domain.ini') as w:
+#        print(w.read())
+#except Exception as e:
+#    log.exception(f"Ошибка при чтении файла: {str(e)}")
+
+#exit()
 
 # Подключение к ldap
 from connect.ldapConnect import ActiveDirectoryConnector
@@ -31,16 +51,18 @@ from actions.blocking import blocking_user
 from actions.holiday import holiday
 
 # Подключение файла сообщения
-from message.message import log
+#from message.message import log
 
 
 def move_file(file_path,output_dir):
-    if os.path.exists( output_dir+os.path.basename(file_path) ):
+    log.debug(os.path.join(output_dir,os.path.basename(file_path)))
+    if os.path.exists( os.path.join(output_dir,os.path.basename(file_path))):
         dest_name = os.path.join(output_dir,datetime.now().strftime('%H%M%S')+os.path.basename(file_path))
     else:
         dest_name = output_dir
     try:
         shutil.move(file_path, dest_name)
+        bitrix_connector.send_msg(f"move_file {file_path} -> {dest_name}")
     except Exception as e:
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
@@ -156,7 +178,7 @@ def process_file(file_path):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.13.01.2025'
+    ver = 'V.21.02.2025'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
@@ -165,15 +187,17 @@ def main():
 
     bitrix_connector.send_msg(f"Старт Версии {ver} {mode}")
     n = 0
+    log.info(f"{input_dir}")
     while True:
         for root, dirs, files in os.walk(input_dir):
             for file in fnmatch.filter(files, "*.xlsx"):
-                log.info(os.path.join(root, file))
+                bitrix_connector.send_msg(os.path.join(root, file))
                 process_file(os.path.join(root, file))
 
         time.sleep(60)
         move_back()
-        print(datetime.now())            
+        print(datetime.now())
+        log.info(datetime.now())
 
 if __name__ == '__main__':
     main()

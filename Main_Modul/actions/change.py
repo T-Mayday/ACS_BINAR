@@ -48,6 +48,7 @@ def change_user(file_path):
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)
 
+    bitrix_connector.send_msg(str(flags))
     # Новые данные
     name_atrr = {
         'sn': userData["B2"].value.encode('utf-8'),
@@ -61,7 +62,7 @@ def change_user(file_path):
     new_data = {
         "NAME": str(userData['C2'].value),
         "LAST_NAME": str(userData['B2'].value),
-        "UF_DEPARTMENT": str(userData['H2'].value),
+#        "UF_DEPARTMENT": str(userData['H2'].value),
         "ACTIVE": "Y",
         "WORK_POSITION": str(userData['J2'].value)
     }

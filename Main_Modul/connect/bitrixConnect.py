@@ -11,16 +11,19 @@ from message.message import log
 class Bitrix24Connector:
     #  Получение данных из ini файла
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('connect_domain.ini')
-        self.user_login = self.config['Bitrix24']['user_login']
-        self.user_password = self.config['Bitrix24']['user_password']
-        self.linkBx24 = self.config.get('Bitrix24', 'linkBx24')
-        self.clientId = self.config.get('Bitrix24', 'clientId')
-        self.clientSecret = self.config.get('Bitrix24', 'clientSecret')
-        self.chatID = self.config.get('Bitrix24', 'chatID')
-        self.chatadmID1 = self.config.get('Bitrix24', 'chatadmID1')
-        self.chatadmID2 = self.config.get('Bitrix24', 'chatadmID2')
+        try:
+            self.config = configparser.ConfigParser()
+            self.config.read('connect_domain.ini')
+            self.user_login = self.config['Bitrix24']['user_login']
+            self.user_password = self.config['Bitrix24']['user_password']
+            self.linkBx24 = self.config.get('Bitrix24', 'linkBx24')
+            self.clientId = self.config.get('Bitrix24', 'clientId')
+            self.clientSecret = self.config.get('Bitrix24', 'clientSecret')
+            self.chatID = self.config.get('Bitrix24', 'chatID')
+            self.chatadmID1 = self.config.get('Bitrix24', 'chatadmID1')
+            self.chatadmID2 = self.config.get('Bitrix24', 'chatadmID2')
+        except Exception as e:
+            log.exception("Error read config", e)
     def getChatID(self):
         return self.chatID
 
@@ -177,7 +180,8 @@ class Bitrix24Connector:
                 "LAST_NAME": employee.lastname,
                 "SECOND_NAME": employee.surname,
                 "EMAIL": email,
-                "UF_DEPARTMENT": str(userData['H2'].value),
+#                "UF_DEPARTMENT": str(userData['H2'].value),
+                "UF_DEPARTMENT": "920",
                 "ACTIVE": "Y",
                 "WORK_POSITION": str(userData["J2"].value),
             }
@@ -222,12 +226,3 @@ class Bitrix24Connector:
         except Exception as e:
             self.send_msg_error(f"BX24. Блокировка: {employee.lastname, employee.firstname, employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. {user_id} {result}. Ошибка {e}")
             return False
-
-
-
-
-
-
-
-
-        

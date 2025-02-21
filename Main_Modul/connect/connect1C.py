@@ -6,11 +6,14 @@ bitrix_connector = Bitrix24Connector()
 
 class Connector1C:
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('connect_domain.ini')
-        self.url_create = self.config.get('INFO1C', 'url_create')
-        self.url_changes = self.config.get('INFO1C', 'url_changes')
-        self.url_block = self.config.get('INFO1C', 'url_block')
+        try:
+            self.config = configparser.ConfigParser()
+            self.config.read('connect_domain.ini')
+            self.url_create = self.config.get('INFO1C', 'url_create')
+            self.url_changes = self.config.get('INFO1C', 'url_changes')
+            self.url_block = self.config.get('INFO1C', 'url_block')
+        except Exception as e:
+            log.exception("Error read config", e)
 
     def getUrlCreate(self):
         return self.url_create

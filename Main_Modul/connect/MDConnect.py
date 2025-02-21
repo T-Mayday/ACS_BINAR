@@ -6,10 +6,13 @@ bitrix_connector = Bitrix24Connector()
 
 class MDAUIDConnect:
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('connect_domain.ini')
-        self.base_url = self.config['MD_AUDIT']['base_url']
-        self.api_token = self.config['MD_AUDIT']['api_token']
+        try:
+            self.config = configparser.ConfigParser()
+            self.config.read('connect_domain.ini')
+            self.base_url = self.config['MD_AUDIT']['base_url']
+            self.api_token = self.config['MD_AUDIT']['api_token']
+        except Exception as e:
+            log.exception("Error read config", e)
 
     def find_user_by_email(self, email):
         url = f"{self.base_url}/orgstruct/users"
