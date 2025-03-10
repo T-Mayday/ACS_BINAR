@@ -104,15 +104,18 @@ def change_user(file_path):
                 user_account_control = attributes.get('userAccountControl', [b''])[0]
                 uac_value = int(user_account_control.decode())
                 is_active = not (uac_value & 0x0002)
+                bitrix_connector.send_msg(f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Найден {user_dn}")
                 if not is_active:
                     try:
                         ad_success = connector.activate_user(user_dn, employee, userData)
+                        bitrix_connector.send_msg(f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Активирован {user_dn}")
                     except Exception as e:
                         ad_success = False
                         bitrix_connector.send_msg_error(
                             f"AD. Ошибка при активации учетной записи сотрудника {employee.firstname} {employee.lastname} {employee.surname}: {e}")
                 try:
                     ad_success =  connector.update_user(existence, name_atrr, employee, userData)
+                    bitrix_connector.send_msg(f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Обновлен {user_dn}")
                 except Exception as e:
                     bitrix_connector.send_msg_error(
                         f"AD. Изменение. Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка в обновлении - {e}")
@@ -138,7 +141,12 @@ def change_user(file_path):
             user_info = bitrix_connector.search_email(mail)
             if user_info:
                 if state == '1':
-                    bx_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
+                    try:
+                        bx_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
+                    except Exception as e:
+                        bx_success = False
+                        bitrix_connector.send_msg_error(
+                            f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {mail} {user_info.get('ID')}. Ошибка}: {e}")
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")

@@ -67,7 +67,8 @@ def move_file(file_path,output_dir):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def move_file_waste(file_path,output_dir):
-    if not os.path.exists( output_dir+os.path.basename(file_path) ):
+#    if not os.path.exists( output_dir+os.path.basename(file_path) ):
+    if not os.path.exists(os.path.join(output_dir,os.path.basename(file_path))):
         try:
             shutil.move(file_path, output_dir)
         except Exception as e:
@@ -178,7 +179,7 @@ def process_file(file_path):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V.21.02.2025'
+    ver = 'V10.03.2025'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
