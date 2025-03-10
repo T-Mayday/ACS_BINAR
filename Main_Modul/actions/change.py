@@ -115,7 +115,7 @@ def change_user(file_path):
                             f"AD. Ошибка при активации учетной записи сотрудника {employee.firstname} {employee.lastname} {employee.surname}: {e}")
                 try:
                     ad_success =  connector.update_user(existence, name_atrr, employee, userData)
-                    bitrix_connector.send_msg(f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Обновлен {user_dn}")
+                    bitrix_connector.send_msg(f"AD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Обновлен {user_dn} {str(name_atrr)}")
                 except Exception as e:
                     bitrix_connector.send_msg_error(
                         f"AD. Изменение. Сотрудник {employee.lastname} {employee.firstname} {employee.surname} из отдела {userData['G2'].value} на должность {userData['J2'].value}. Ошибка в обновлении - {e}")
