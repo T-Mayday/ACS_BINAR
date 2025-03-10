@@ -143,12 +143,15 @@ def change_user(file_path):
                 if state == '1':
                     try:
                         bx_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
+                        bitrix_connector.send_msg(f"BXD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {mail} {user_info.get('ID')}. Изменен")
                     except Exception as e:
                         bx_success = False
                         bitrix_connector.send_msg_error(f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {mail} {user_info.get('ID')}. Ошибка: {e}")
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
+            else:
+                bitrix_connector.send_msg(f"BXD. Изменение: Сотрудник {employee.lastname} {employee.firstname} {employee.surname}. Не найден по {mail}")
         else:
             user_info = bitrix_connector.search_user(employee.lastname, employee.firstname, employee.surname)
             if user_info:
