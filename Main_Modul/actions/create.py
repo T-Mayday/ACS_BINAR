@@ -1,9 +1,18 @@
 from openpyxl import load_workbook, Workbook
 import pandas as pd
+import configparser
+
+# Загружаем конфигурацию из connect_domain.ini
+config = configparser.ConfigParser(interpolation=None)
+config.read('connect_domain.ini', encoding='utf-8')
+MODE = config.get('SETTINGS', 'mode', fallback='new')
 
 
-# подключение файла поиска
-from outher.search import user_verification
+# Подключение поиска
+from outher.search import user_verification as search_user_verification
+from connect.SQLConnect import DatabaseConnector
+db = DatabaseConnector() if MODE == "new" else None  # Подключаем БД только если режим "new"
+
 
 # подключение файла сообщений
 from message.message import log
@@ -32,6 +41,22 @@ name_domain = connector.domain_name
 # Подключение к SM
 from connect.SMConnect import SMConnect
 
+# Выбор версии user_verification
+def user_verification(*args):
+    """
+    Автоматически выбирает нужную версию функции:
+    - Если mode = old → Pandas-версия
+    - Если mode = new → PostgreSQL-версия
+    """
+    if MODE == "old":
+        df_roles, df_users = args
+        return search_user_verification(df_roles, df_users)  # Используем старую версию
+    else:
+        department, position = args
+        return db.user_verification(department=department, position=position)  # Используем новую версию
+
+
+
 # Функция записи логина и пароля
 def save_login(phone_number, full_name, login):
         bitrix_connector.send_msg_adm(f"{phone_number} {full_name} {login}")
@@ -52,11 +77,15 @@ def create_user(file_path):
 
     userData = load_workbook(file_path).active
 
-    df_users = pd.read_excel(file_path)
-    df_roles = pd.read_excel(connector.dbinfo)
-
     # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
+    if MODE == "old":
+        df_users = pd.read_excel(file_path)
+        df_roles = pd.read_excel(connector.dbinfo)
+        flags = user_verification(df_roles, df_users)  # Используем Pandas
+    else:
+        department = userData['G2'].value
+        position = userData['J2'].value
+        flags = user_verification(department, position)  # Используем PostgreSQL
 
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)

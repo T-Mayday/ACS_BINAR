@@ -1,11 +1,20 @@
 from openpyxl import load_workbook
 import pandas as pd
+import configparser
 
 # Подключение файла create.py
 from actions.create import create_user
 
-# подключение файла поиска
-from outher.search import user_verification
+# Загружаем конфигурацию из connect_domain.ini
+config = configparser.ConfigParser(interpolation=None)
+config.read('connect_domain.ini', encoding='utf-8')
+MODE = config.get('SETTINGS', 'mode', fallback='new')
+
+# Подключение поиска
+from outher.search import user_verification as search_user_verification
+from connect.SQLConnect import DatabaseConnector
+db = DatabaseConnector() if MODE == "new" else None  # Подключаем БД только если режим "new"
+
 
 # подключение файла сообщений
 from message.message import log
@@ -30,20 +39,36 @@ connector = ActiveDirectoryConnector()
 base_dn = connector.getBaseDn()
 state = connector.getState()
 
+def user_verification(*args):
+    """
+    Автоматически выбирает нужную версию функции:
+    - Если mode = old → Pandas-версия
+    - Если mode = new → PostgreSQL-версия
+    """
+    if MODE == "old":
+        df_roles, df_users = args
+        return search_user_verification(df_roles, df_users)  # Используем старую версию
+    else:
+        department, position = args
+        return db.user_verification(department=department, position=position)  # Используем новую версию
+
 
 def change_user(file_path):
     global base_dn, state
 
     userData = load_workbook(file_path).active
 
-    df_users = pd.read_excel(file_path)
-    df_roles = pd.read_excel(connector.dbinfo)
-
     # Создание объекта сотрудника
     employee = Person(userData['C2'].value, userData['B2'].value, userData["D2"].value)
 
-    # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
+    if MODE == "old":
+        df_users = pd.read_excel(file_path)
+        df_roles = pd.read_excel(connector.dbinfo)
+        flags = user_verification(df_roles, df_users)  # Используем Pandas
+    else:
+        department = userData['G2'].value
+        position = userData['J2'].value
+        flags = user_verification(department, position)  # Используем PostgreSQL
 
     # Зашифровка ИНН
     INN = encrypt_inn(userData['A2'].value)

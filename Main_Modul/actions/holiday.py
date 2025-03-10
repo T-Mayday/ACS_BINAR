@@ -3,6 +3,7 @@ import random
 import string
 from datetime import datetime
 import pandas as pd
+import configparser
 
 # Подключение ldapConnect
 from connect.ldapConnect import ActiveDirectoryConnector
@@ -11,8 +12,16 @@ base_dn = connector.getBaseDn()
 state = connector.getState()
 
 
-# подключение файла поиска
-from outher.search import user_verification
+# Загружаем конфигурацию из connect_domain.ini
+config = configparser.ConfigParser(interpolation=None)
+config.read('connect_domain.ini', encoding='utf-8')
+MODE = config.get('SETTINGS', 'mode', fallback='new')
+
+# Подключение поиска
+from outher.search import user_verification as search_user_verification
+from connect.SQLConnect import DatabaseConnector
+db = DatabaseConnector() if MODE == "new" else None  # Подключаем БД только если режим "new"
+
 
 # Подключение файла сообщения
 from message.message import log
@@ -53,6 +62,18 @@ def check_existing_holiday(user_id, start_date, end_date):
         bitrix_connector.send_msg_error(f"Ошибка при проверке существующего отпуска: {e}")
         return False
 
+def user_verification(*args):
+    """
+    Автоматически выбирает нужную версию функции:
+    - Если mode = old → Pandas-версия
+    - Если mode = new → PostgreSQL-версия
+    """
+    if MODE == "old":
+        df_roles, df_users = args
+        return search_user_verification(df_roles, df_users)  # Используем старую версию
+    else:
+        department, position = args
+        return db.user_verification(department=department, position=position)  # Используем новую версию
 
 def holiday(file_path):
     global random_string, state
@@ -61,8 +82,16 @@ def holiday(file_path):
     df_users = pd.read_excel(file_path)
     df_roles = pd.read_excel(connector.dbinfo)
 
-    # поиск по info.xlsx
-    flags = user_verification(df_roles, df_users)
+    if MODE == "old":
+        df_users = pd.read_excel(file_path)
+        df_roles = pd.read_excel(connector.dbinfo)
+        flags = user_verification(df_roles, df_users)  # Используем Pandas
+    else:
+        department = excel_data['G2'].value
+        position = excel_data['J2'].value
+        flags = user_verification(department, position)  # Используем PostgreSQL
+
+
     random_string = generate_random_string()
     bitrix_connector.send_msg(str(flags))
 
