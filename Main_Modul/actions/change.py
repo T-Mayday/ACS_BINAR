@@ -145,8 +145,7 @@ def change_user(file_path):
                         bx_success, update_status_bx = bitrix_connector.update_user(user_info, new_data, employee, userData)
                     except Exception as e:
                         bx_success = False
-                        bitrix_connector.send_msg_error(
-                            f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {mail} {user_info.get('ID')}. Ошибка}: {e}")
+                        bitrix_connector.send_msg_error(f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {mail} {user_info.get('ID')}. Ошибка}: {e}")
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Изменение (Тест): Сотрудник {employee.lastname} {employee.firstname} {employee.surname} {user_info.get('ID')}. Выполнено")
