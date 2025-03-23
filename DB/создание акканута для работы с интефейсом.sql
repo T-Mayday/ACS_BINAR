@@ -1,9 +1,8 @@
-INSERT INTO access_rights (department_id, position_id, system_id, user_type)
+INSERT INTO system_attributes (system_id, name, value)
 VALUES 
-    ((SELECT id FROM departments WHERE name = 'ИТ ЛАБОРАТОРИЯ'),
-     (SELECT id FROM positions WHERE name = 'Техник-программист'),
-     8,
-     'ФИО')
+    (8, 'role', 'admin'),
+    (8, 'role', 'moderator'),
+    (8, 'role', 'user')
 RETURNING id;
 
 INSERT INTO access_rights_attr (access_rights_id, system_attribute_id)
@@ -15,14 +14,6 @@ VALUES (
      ORDER BY id DESC LIMIT 1),
     1
 )
-RETURNING id;
-
-
-INSERT INTO system_attributes (system_id, name, value)
-VALUES 
-    (8, 'role', 'admin'),
-    (8, 'role', 'moderator'),
-    (8, 'role', 'user')
 RETURNING id;
 
 
