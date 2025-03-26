@@ -145,8 +145,8 @@ def blocking_user(file_path):
             user_info = bitrix_connector.search_email(mail)
             if user_info:
                 if state == '1':
-                    if user_info.get('ACTIVE'):
-                        bx24_success = bitrix_connector.block_user(user_info.get('ID'), employee, userData)
+#                    if user_info.get('ACTIVE'):
+                    bx24_success = bitrix_connector.block_user(user_info.get('ID'), employee, userData)
                 else:
                     bitrix_connector.send_msg(
                         f"BX24. Блокировка (Тест): {employee.firstname} {employee.lastname} {employee.surname}. Выполнено")
