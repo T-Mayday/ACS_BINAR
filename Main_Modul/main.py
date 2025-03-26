@@ -10,6 +10,11 @@ from os.path import isfile, join
 # Подключение файла сообщения
 from message.message import log
 
+import configparser
+config = configparser.ConfigParser(interpolation=None)
+config.read('connect_domain.ini', encoding='utf-8')
+DBMODE = config.get('SETTINGS', 'mode', fallback='new')
+
 print('START')
 log.info('START')
 
@@ -179,14 +184,14 @@ def process_file(file_path):
         bitrix_connector.send_msg(f'Ошибка обработки файла {file_path}: {str(e)}')
 
 def main():
-    ver = 'V10.03.2025'
+    ver = 'V26.03.2025'
 
     if connector.getState() == "1":
         mode = 'Боевой режим!'
     else:
         mode = 'Тестовый режим!'
 
-    bitrix_connector.send_msg(f"Старт Версии {ver} {mode}")
+    bitrix_connector.send_msg(f"Старт Версии {ver} {mode} dbmode={DBMODE}")
     n = 0
     log.info(f"{input_dir}")
     while True:
