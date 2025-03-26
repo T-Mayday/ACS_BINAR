@@ -1,6 +1,8 @@
 import psycopg2
 import configparser
+from message.message import log
 from connect.bitrixConnect import Bitrix24Connector  # Подключение Bitrix24
+bitrix_connector = Bitrix24Connector()
 
 class DatabaseConnector:
     def __init__(self):
@@ -26,7 +28,8 @@ class DatabaseConnector:
             conn = psycopg2.connect(**DB_CONFIG)
             return conn
         except psycopg2.Error as e:
-            print("Ошибка подключения к базе данных:", e)
+            log.exception("Ошибка подключения к базе данных:", e)
+            bitrix_connector.send_msg_error(f"Ошибка подключения к базе данных: {str(e)}")
             return None
 
     def user_verification(self, department, position):

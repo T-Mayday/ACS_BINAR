@@ -13,7 +13,6 @@ from outher.search import user_verification as search_user_verification
 from connect.SQLConnect import DatabaseConnector
 db = DatabaseConnector() if MODE == "new" else None  # Подключаем БД только если режим "new"
 
-
 # подключение файла сообщений
 from message.message import log
 
